@@ -1,0 +1,52 @@
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x", "linux-musl-arm64-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Participant {
+  participantId String   @id
+  name          String
+  roles         String[] // ["proof_issuer", ...]
+  status        String   @default("ACTIVE")
+  createdAt     DateTime @default(now())
+  endpoints     Endpoint[]
+  keys          Key[]
+  permissions   Permission[]
+}
+
+model Endpoint {
+  id            String   @id @default(uuid())
+  participantId String
+  service       String   // e.g. "proofIssue", "proofStatus"
+  baseUrl       String
+  participant   Participant @relation(fields: [participantId], references: [participantId], onDelete: Cascade)
+  @@unique([participantId, service])
+}
+
+model Key {
+  id            String   @id @default(uuid())
+  participantId String
+  keyId         String
+  alg           String   @default("Ed25519")
+  publicKey     String
+  status        String   @default("ACTIVE")
+  createdAt     DateTime @default(now())
+  participant   Participant @relation(fields: [participantId], references: [participantId], onDelete: Cascade)
+  @@unique([participantId, keyId])
+}
+
+model Permission {
+  id            String   @id @default(uuid())
+  participantId String
+  action        String
+  proofType     String?
+  resource      String?
+  conditionsJson String?  @map("conditions_json")
+  effect        String   // ALLOW | DENY
+  participant   Participant @relation(fields: [participantId], references: [participantId], onDelete: Cascade)
+}

@@ -1,0 +1,4 @@
+[
+  {"participantId": "did:web:works.demo.gov", "name": "Works Proof Issuer", "roles": ["proof_issuer"]},
+  {"participantId": "did:web:vendor.demo.gov", "name": "Vendor Proof Issuer", "roles": ["proof_issuer"]}
+]

@@ -60,4 +60,10 @@ for user in "finance@demo.gov:finance_admin,dept_operator" "treasury@demo.gov:tr
   done
 done
 
+echo "Creating pfm-setup client (direct access grants for seeding)..."
+curl -s -X POST "$KEYCLOAK_URL/admin/realms/pfm-demo/clients" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"clientId": "pfm-setup", "enabled": true, "publicClient": true, "directAccessGrantsEnabled": true}' -w "%{http_code}" -o /dev/null | grep -qE '201|409' || true
+
 echo "Keycloak init done."

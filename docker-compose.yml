@@ -24,6 +24,8 @@ services:
     environment:
       KEYCLOAK_ADMIN: admin
       KEYCLOAK_ADMIN_PASSWORD: admin
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: admin
       KC_DB: postgres
       KC_DB_URL: jdbc:postgresql://postgres:5432/pfm
       KC_DB_USERNAME: pfm
@@ -52,6 +54,9 @@ services:
       PORT: 8080
       NODE_ENV: production
       DATABASE_URL: postgresql://pfm:pfm_secret@postgres:5432/pfm
+      DIRECTORY_SEED_SECRET: ${DIRECTORY_SEED_SECRET:-pfm-demo-seed-secret}
+    ports:
+      - "8081:8080"
     depends_on:
       postgres:
         condition: service_healthy

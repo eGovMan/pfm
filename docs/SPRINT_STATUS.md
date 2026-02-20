@@ -44,7 +44,39 @@ docker compose up -d
 - Smoke tests: `./scripts/smoke-tests.sh` (run after `docker compose up -d`)
 
 ### Known gaps / tech debt
-- Seed scripts only write JSON to infra/seed/; no admin API calls until Sprint 1+
 - Keycloak realm created via API; no realm JSON file import
 - generate-keys.sh uses Node to create Ed25519 keys when available; otherwise placeholder JSON
 - Smoke tests require Docker; no unit tests yet
+
+---
+
+## Sprint 1: Directory, keys, permissions
+
+### Goal
+A working participant directory and authorization model for "who can issue what" and "who can override what".
+
+### Completed
+- [x] Directory data model: Prisma schema (Participant, Endpoint, Key, Permission); migrations via `prisma db push` on startup
+- [x] Directory API v1: GET /v1/participants/:id, GET /v1/participants?role=&proofType=, GET /v1/participants/:id/keys, GET /v1/permissions/:id, GET /v1/permissions/isAllowed
+- [x] Admin bulk: POST /v1/admin/participants/bulk, POST /v1/admin/permissions/bulk (Keycloak-protected or X-Seed-Secret for bootstrap)
+- [x] Key management: keyId standard; public keys in directory; seed scripts merge generate-keys output into participants bulk
+- [x] Seed scripts call directory-service (token or DIRECTORY_SEED_SECRET); init-keycloak creates pfm-setup client
+- [x] Smoke tests: directory returns keys/endpoints, isAllowed allows/denies correctly, admin without token returns 401
+
+### How to validate
+```bash
+docker compose up -d
+# Wait for healthy, then:
+./scripts/init-keycloak.sh   # optional if using seed secret
+./scripts/generate-keys.sh
+./scripts/seed-directory.sh
+./scripts/seed-permissions.sh
+./scripts/smoke-tests.sh
+```
+
+**Key endpoints**
+- Directory (exposed 8081 for setup): GET /v1/participants/did:web:works.demo.gov, GET /v1/permissions/isAllowed?participantId=...&action=issue_proof&proofType=WorkCompletionProof
+
+### Known gaps / tech debt
+- Admin auth: Keycloak JWT (finance_admin/system_service) or X-Seed-Secret for bootstrap; Keycloak token may require realm client setup
+- Prisma binaryTargets set for linux-musl OpenSSL 3 (Alpine); directory-service Dockerfile adds `apk add openssl`
