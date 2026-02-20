@@ -180,3 +180,28 @@ docker compose up -d
 
 ### Known gaps / tech debt
 - None
+
+---
+
+## Sprint 6: Exceptions and redressal
+
+### Goal
+Appeals and overrides with Keycloak redressal role; override policy from rulebook; audit logging of overrides.
+
+### Completed
+- [x] Appeal and Override models (Prisma); POST /v1/exceptions/appeal; POST /v1/exceptions/override (auth: redressal_authority)
+- [x] Override: last decision from audit, reason codes from rulebook; reject if any reasonCodesOverridden has overrideAllowed false (403 OVERRIDE_DISALLOWED)
+- [x] POST override creates Override record and POSTs statusEvents (eventType override_applied) to audit
+- [x] GET /v1/exceptions/cases/:caseId (appeals + overrides)
+- [x] Docker: exceptions-service port 8089; AUDIT_BASE_URL, RULEBOOK_BASE_URL; depends_on audit-service, rulebook-service
+- [x] Smoke tests: POST appeal 201, override without token 401, override disallowed code 403 (with Keycloak token), GET cases returns appeals
+
+### How to validate
+```bash
+docker compose up -d
+./scripts/init-keycloak.sh   # for redressal@demo.gov token
+./scripts/smoke-tests.sh
+```
+
+### Known gaps / tech debt
+- Smoke 403 test skipped if Keycloak token for redressal not available

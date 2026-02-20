@@ -302,6 +302,53 @@ else
   fail=1
 fi
 
+# Sprint 6: Exceptions (port 8089)
+code_appeal=$(curl -s -o /tmp/appeal.json -w "%{http_code}" -X POST "http://127.0.0.1:8089/v1/exceptions/appeal" \
+  -H "Content-Type: application/json" \
+  -d '{"caseId":"smoke-a1","reason":"Test appeal","raisedBy":"smoke-test"}' 2>/dev/null || echo "000")
+if [ "$code_appeal" = "201" ]; then
+  echo "  OK exceptions POST appeal -> 201"
+else
+  echo "  FAIL exceptions appeal (got $code_appeal)"
+  fail=1
+fi
+
+code_override_unauth=$(curl -s -o /dev/null -w "%{http_code}" -X POST "http://127.0.0.1:8089/v1/exceptions/override" \
+  -H "Content-Type: application/json" \
+  -d '{"caseId":"smoke-a1","reasonCodesOverridden":["VENDOR_BANK_NOT_VALIDATED"],"justification":"test"}' 2>/dev/null || echo "000")
+if [ "$code_override_unauth" = "401" ]; then
+  echo "  OK exceptions override without token -> 401"
+else
+  echo "  FAIL exceptions override without token expected 401 (got $code_override_unauth)"
+  fail=1
+fi
+
+REDRESSAL_TOKEN=$(curl -s -X POST "http://127.0.0.1:8088/realms/pfm-demo/protocol/openid-connect/token" \
+  -H "Content-Type: application/x-www-form-urlencoded" \
+  -d "grant_type=password" -d "client_id=pfm-setup" -d "username=redressal@demo.gov" -d "password=demo123" 2>/dev/null | jq -r '.access_token // empty' 2>/dev/null)
+if [ -n "$REDRESSAL_TOKEN" ]; then
+  code_override_disallowed=$(curl -s -o /tmp/override_resp.json -w "%{http_code}" -X POST "http://127.0.0.1:8089/v1/exceptions/override" \
+    -H "Authorization: Bearer $REDRESSAL_TOKEN" -H "Content-Type: application/json" \
+    -d '{"caseId":"smoke-a1","reasonCodesOverridden":["INVALID_PROOF_SIGNATURE"],"justification":"test"}' 2>/dev/null || echo "000")
+  if [ "$code_override_disallowed" = "403" ]; then
+    echo "  OK exceptions override disallowed reason code -> 403"
+  else
+    echo "  FAIL exceptions override disallowed expected 403 (got $code_override_disallowed)"
+    fail=1
+  fi
+else
+  echo "  SKIP exceptions override 403 (Keycloak token for redressal not available)"
+fi
+
+exceptions_get=$(curl -s "http://127.0.0.1:8089/v1/exceptions/cases/smoke-a1" 2>/dev/null)
+appeals_count=$(echo "$exceptions_get" | jq '.appeals | length' 2>/dev/null || echo "0")
+if [ "$appeals_count" -ge "1" ]; then
+  echo "  OK exceptions GET cases/:caseId returns appeals"
+else
+  echo "  FAIL exceptions GET cases (got $appeals_count appeals)"
+  fail=1
+fi
+
 if [ $fail -eq 1 ]; then
   echo "Some smoke tests failed."
   exit 1

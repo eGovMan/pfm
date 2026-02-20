@@ -1,0 +1,30 @@
+generator client {
+  provider      = "prisma-client-js"
+  output        = "../src/generated/prisma"
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x", "linux-musl-arm64-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Appeal {
+  id        String   @id @default(uuid())
+  caseId    String   @map("case_id")
+  raisedBy  String   @map("raised_by")
+  reason    String
+  status    String   @default("PENDING")
+  createdAt DateTime @default(now()) @map("created_at")
+  @@index([caseId])
+}
+
+model Override {
+  id                    String   @id @default(uuid())
+  caseId                String   @map("case_id")
+  performedBy           String   @map("performed_by")
+  reasonCodesOverridden String   @map("reason_codes_overridden_json") // JSON array
+  justification         String
+  createdAt             DateTime @default(now()) @map("created_at")
+  @@index([caseId])
+}

@@ -1,15 +1,20 @@
 import { checkConnection } from '@pfm/shared-db';
 import { createServer } from '@pfm/shared-http';
-import { loadServiceConfig } from '@pfm/shared-config';
-
-const config = loadServiceConfig('exceptions-service');
+import { port, serviceName, databaseUrl } from './config.js';
+import { migrate } from './db.js';
+import { registerRoutes } from './routes.js';
 
 async function main() {
+  const dbUrl = databaseUrl;
+  if (dbUrl) {
+    await migrate();
+  }
   const app = await createServer({
-    serviceName: config.serviceName,
-    healthCheck: config.databaseUrl ? async () => ({ ok: await checkConnection(config.databaseUrl!) }) : undefined,
+    serviceName,
+    healthCheck: dbUrl ? async () => ({ ok: await checkConnection(dbUrl) }) : undefined,
+    registerRoutes,
   });
-  await app.listen({ port: config.port, host: '0.0.0.0' });
+  await app.listen({ port, host: '0.0.0.0' });
 }
 
 main().catch((err) => {
