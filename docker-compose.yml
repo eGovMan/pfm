@@ -95,6 +95,13 @@ services:
       PORT: 8080
       NODE_ENV: production
       DATABASE_URL: postgresql://pfm:pfm_secret@postgres:5432/pfm
+      ISSUER_PRIVATE_KEY_PATH: /app/keys/works.key
+      ISSUER_ID: did:web:works.demo.gov
+      STATUS_BASE_URL: http://works-proof-issuer:8080
+    volumes:
+      - ./infra/keys:/app/keys:ro
+    ports:
+      - "8082:8080"
     depends_on:
       postgres:
         condition: service_healthy
@@ -114,6 +121,13 @@ services:
       PORT: 8080
       NODE_ENV: production
       DATABASE_URL: postgresql://pfm:pfm_secret@postgres:5432/pfm
+      ISSUER_PRIVATE_KEY_PATH: /app/keys/vendor.key
+      ISSUER_ID: did:web:vendor.demo.gov
+      STATUS_BASE_URL: http://vendor-proof-issuer:8080
+    volumes:
+      - ./infra/keys:/app/keys:ro
+    ports:
+      - "8083:8080"
     depends_on:
       postgres:
         condition: service_healthy

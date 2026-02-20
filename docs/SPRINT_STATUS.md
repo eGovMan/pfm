@@ -79,4 +79,30 @@ docker compose up -d
 
 ### Known gaps / tech debt
 - Admin auth: Keycloak JWT (finance_admin/system_service) or X-Seed-Secret for bootstrap; Keycloak token may require realm client setup
+
+---
+
+## Sprint 2: Proof issuance and verification
+
+### Goal
+Works and vendor proof issuers issue signed proofs; verifiers use directory public keys and shared-crypto to verify.
+
+### Completed
+- [x] shared-crypto: RFC 8785 canonical JSON, sha256Hex, Ed25519 sign/verify (one-shot crypto.sign/verify), getProofPayloadToSign, verifyProofSignature, publicKeyPemFromBase64
+- [x] shared-types: ProofStatus, ProofSignature, ProofEnvelope
+- [x] works-proof-issuer: POST /v1/proofs/issue, GET /v1/proofs/:proofId/status, GET /v1/proofs/:proofId, POST /v1/admin/proofs/:proofId/revoke; key from ISSUER_PRIVATE_KEY_PATH
+- [x] vendor-proof-issuer: same API for VendorEligibilityProof
+- [x] Docker: infra/keys mounted for both issuers; ISSUER_PRIVATE_KEY_PATH, ISSUER_ID, STATUS_BASE_URL set; ports 8082 (works), 8083 (vendor) for smoke tests
+- [x] Smoke tests: issue work + vendor proof, GET status VALID, verify signature via directory public key (scripts/verify-proof-smoke.js)
+
+### How to validate
+```bash
+./scripts/generate-keys.sh
+./scripts/seed-directory.sh   # re-seed so directory has public keys
+docker compose up -d           # ensure 8082/8083 exposed
+./scripts/smoke-tests.sh
+```
+
+### Known gaps / tech debt
+- Setup order: run generate-keys before seed-directory so directory gets public keys; re-run seed-directory after generate-keys if directory was seeded earlier
 - Prisma binaryTargets set for linux-musl OpenSSL 3 (Alpine); directory-service Dockerfile adds `apk add openssl`

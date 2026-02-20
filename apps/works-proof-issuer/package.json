@@ -9,9 +9,11 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@pfm/shared-config": "*",
+    "@pfm/shared-crypto": "*",
     "@pfm/shared-db": "*",
     "@pfm/shared-http": "*",
-    "@pfm/shared-config": "*"
+    "@pfm/shared-types": "*"
   },
   "devDependencies": {
     "@types/node": "^20.10.0",

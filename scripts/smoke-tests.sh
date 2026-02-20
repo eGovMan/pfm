@@ -80,6 +80,61 @@ else
   fail=1
 fi
 
+# Sprint 2: Proof issuers (exposed 8082 works, 8083 vendor)
+# Ensure infra/keys exist (run generate-keys.sh) and re-run 'docker compose up -d' to expose 8082/8083.
+code_work_issue=$(curl -s -o /tmp/work-proof.json -w "%{http_code}" -X POST "http://127.0.0.1:8082/v1/proofs/issue" \
+  -H "Content-Type: application/json" \
+  -d '{"workId":"w1","milestoneId":"m1","completionDate":"2025-01-01"}' 2>/dev/null || echo "000")
+if [ "$code_work_issue" = "201" ]; then
+  if grep -q '"proofId"' /tmp/work-proof.json 2>/dev/null && grep -q '"signature"' /tmp/work-proof.json 2>/dev/null; then
+    echo "  OK works-proof-issuer POST /v1/proofs/issue -> 201 (proof + signature)"
+  else
+    echo "  FAIL works-proof-issuer response missing proofId/signature"
+    fail=1
+  fi
+else
+  echo "  FAIL works-proof-issuer issue (got $code_work_issue). Ensure ports 8082/8083 exposed and infra/keys exist."
+  fail=1
+fi
+
+work_proof_id=$(jq -r .proofId /tmp/work-proof.json 2>/dev/null || echo "")
+work_status=$(curl -s "http://127.0.0.1:8082/v1/proofs/${work_proof_id}/status" 2>/dev/null | jq -r .status 2>/dev/null || echo "")
+if [ "$work_status" = "VALID" ]; then
+  echo "  OK works-proof-issuer GET status -> VALID"
+else
+  echo "  FAIL works-proof-issuer status expected VALID (got $work_status)"
+  fail=1
+fi
+
+if node scripts/verify-proof-smoke.js /tmp/work-proof.json "did:web:works.demo.gov" 2>/dev/null; then
+  echo "  OK verify work proof signature (directory public key)"
+else
+  echo "  FAIL verify work proof signature"
+  fail=1
+fi
+
+code_vendor_issue=$(curl -s -o /tmp/vendor-proof.json -w "%{http_code}" -X POST "http://127.0.0.1:8083/v1/proofs/issue" \
+  -H "Content-Type: application/json" \
+  -d '{"canonicalVendorId":"v1","bankValidated":true,"blacklisted":false,"taxStatus":"compliant"}' 2>/dev/null || echo "000")
+if [ "$code_vendor_issue" = "201" ]; then
+  if grep -q '"proofId"' /tmp/vendor-proof.json 2>/dev/null && grep -q '"signature"' /tmp/vendor-proof.json 2>/dev/null; then
+    echo "  OK vendor-proof-issuer POST /v1/proofs/issue -> 201 (proof + signature)"
+  else
+    echo "  FAIL vendor-proof-issuer response missing proofId/signature"
+    fail=1
+  fi
+else
+  echo "  FAIL vendor-proof-issuer issue (got $code_vendor_issue)"
+  fail=1
+fi
+
+if node scripts/verify-proof-smoke.js /tmp/vendor-proof.json "did:web:vendor.demo.gov" 2>/dev/null; then
+  echo "  OK verify vendor proof signature (directory public key)"
+else
+  echo "  FAIL verify vendor proof signature"
+  fail=1
+fi
+
 if [ $fail -eq 1 ]; then
   echo "Some smoke tests failed."
   exit 1

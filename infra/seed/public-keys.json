@@ -1,0 +1,8 @@
+{
+  "did:web:works.demo.gov": {
+    "publicKey": "MCowBQYDK2VwAyEAb9NrVt9uJKK1b1qeky8YZ91tCwMmOCPeRPgBUs76Dw4="
+  },
+  "did:web:vendor.demo.gov": {
+    "publicKey": "MCowBQYDK2VwAyEAxuxLMXQni0TqtTIHHu9qX6TrZhDsPTf+eBpmDFcNpKU="
+  }
+}

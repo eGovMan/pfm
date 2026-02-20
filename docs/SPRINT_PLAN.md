@@ -1,480 +1,473 @@
-# PFM Stack Demo - Sprint Plan
+# PFM Stack Demo – Sprint Plan (Agent-Ready)
 
-## Overview
-Build a runnable concept demo for "DPI for Public Finance" (PFM Stack) focused on vendor payments for works, demonstrating trusted proof exchange, rule application, atomic budget commitment, IFMS interaction, audit trail, and redressal.
+## Purpose and scope
 
-**Adopted stack**: Node.js + TypeScript (all services), React SPA (UIs), REST/JSON, Postgres with Prisma or TypeORM, Keycloak. All design defaults are in `docs/SPECIFICATIONS.md` (Adopted Defaults).
+Build a runnable concept demo for **DPI for Public Finance** focused on vendor payments for works. The demo must show:
 
-## Sprint Structure
-
-### Sprint 0: Infrastructure & Bootstrap (Foundation)
-**Goal**: Get all services running in Docker Compose with one-command setup
-
-#### Tasks
-1. **Docker Compose Setup**
-   - [ ] Create `docker-compose.yml` with all services
-   - [ ] Configure Postgres (single instance)
-   - [ ] Configure Keycloak with admin credentials
-   - [ ] Define service hostnames and health checks
-   - [ ] Configure network isolation (internal vs exposed ports)
-   - [ ] Add service dependencies and startup order
-
-2. **Service Stubs**
-   - [ ] Create directory-service (minimal HTTP server)
-   - [ ] Create rulebook-service (minimal HTTP server)
-   - [ ] Create works-proof-issuer (minimal HTTP server)
-   - [ ] Create vendor-proof-issuer (minimal HTTP server)
-   - [ ] Create checks-engine (minimal HTTP server)
-   - [ ] Create budget-lock (minimal HTTP server)
-   - [ ] Create audit-service (minimal HTTP server)
-   - [ ] Create exceptions-service (minimal HTTP server)
-   - [ ] Create ifms-dummy (minimal HTTP server)
-   - [ ] Create ifms-connector (minimal HTTP server)
-   - [ ] Each service: health endpoint, basic error handling, Postgres connection
-
-3. **UI Stubs**
-   - [ ] Create bill-processing-ui (minimal React/HTML)
-   - [ ] Create audit-viewer-ui (minimal React/HTML)
-   - [ ] Configure nginx or simple static serving
-
-4. **Bootstrap Script**
-   - [ ] Create `scripts/setup.sh` entry point
-   - [ ] Create `scripts/init-keycloak.sh` (realm, clients, roles, users)
-   - [ ] Create `scripts/generate-keys.sh` (Ed25519 keypairs for all participants)
-   - [ ] Create `scripts/seed-directory.sh` (participants, endpoints, public keys)
-   - [ ] Create `scripts/seed-permissions.sh` (allowed actions)
-   - [ ] Create `scripts/seed-rulebook.sh` (vendor-payment rulebook v0.1)
-   - [ ] Create `scripts/seed-domain-data.sh` (vendors, works, budgets)
-   - [ ] Create `scripts/smoke-tests.sh` (automated validation)
-   - [ ] Integrate all scripts into one-command flow
-   - [ ] Add credential printing at end
-
-**Deliverables**:
-- `docker-compose.yml` (all services up)
-- `scripts/setup.sh` (one-command bootstrap)
-- All services respond to health checks
-- Keycloak initialized with demo users
-- Seed data loaded
-
-**Definition of Done**:
-- `make setup` or `./scripts/setup.sh` brings up entire stack
-- All services healthy
-- Smoke tests pass (even if minimal)
-- Credentials printed
+- Trusted proof exchange  
+- Deterministic rule evaluation  
+- Atomic budget commitment  
+- IFMS interaction  
+- Tamper-evident audit trail  
+- Redressal with controlled overrides  
 
 ---
 
-### Sprint 1: Trust Bootstrapping & Directory Services
-**Goal**: Implement participant directory, permissions, and key management
+## Non-negotiables (apply to every sprint)
 
-#### Tasks
-1. **Directory Service**
-   - [ ] Design Postgres schema (participants, keys, endpoints)
-   - [ ] Implement GET /participants/{participantId}
-   - [ ] Implement GET /participants?role=&proofType=
-   - [ ] Implement GET /participants/{participantId}/keys
-   - [ ] Implement GET /permissions/{participantId}
-   - [ ] Implement GET /permissions/isAllowed?participantId=&action=&proofType=
-   - [ ] Implement POST /admin/participants/bulk (bootstrap only)
-   - [ ] Implement POST /admin/permissions/bulk (bootstrap only)
-   - [ ] Add Keycloak integration for admin endpoints
-
-2. **Key Management**
-   - [ ] Implement Ed25519 keypair generation
-   - [ ] Implement key storage (private keys in service env/secrets)
-   - [ ] Implement public key storage in directory
-   - [ ] Add keyId generation and lookup
-
-3. **Permissions Model**
-   - [ ] Design permissions schema (participant, action, proofType, conditions)
-   - [ ] Implement permission evaluation logic
-   - [ ] Add default permissions for demo participants
-
-**Deliverables**:
-- Directory service fully functional
-- All participants registered with keys
-- Permissions enforced
-- Admin seeding endpoints working
-
-**Definition of Done**:
-- Can query participant by ID and get keys/endpoints
-- Permission checks return correct allow/deny
-- Unauthorized issuer blocked
+- **Stack**: Node.js + TypeScript for all services, React SPA for UIs, REST/JSON, Postgres, Keycloak.
+- **Adopted defaults** live in `docs/SPECIFICATIONS.md` and override anything else.
 
 ---
 
-### Sprint 2: Proof Issuance & Verification
-**Goal**: Implement signed proof issuance and verification
+## Repo and runtime conventions
 
-#### Tasks
-1. **Works Proof Issuer**
-   - [ ] Design WorkCompletionProof schema
-   - [ ] Implement POST /proofs/issue (returns signed proof)
-   - [ ] Implement GET /proofs/{proofId}/status
-   - [ ] Implement Ed25519 signing (canonical JSON)
-   - [ ] Add proof storage (Postgres)
-   - [ ] Implement revocation/expiry checks
-   - [ ] Add admin seed endpoint for demo data
-
-2. **Vendor Proof Issuer**
-   - [ ] Design VendorEligibilityProof schema
-   - [ ] Implement POST /proofs/issue (returns signed proof)
-   - [ ] Implement GET /proofs/{proofId}/status
-   - [ ] Implement Ed25519 signing (canonical JSON)
-   - [ ] Add proof storage (Postgres)
-   - [ ] Implement revocation/expiry checks
-   - [ ] Add admin seed endpoint for demo data
-
-3. **Proof Verification Library**
-   - [ ] Implement canonical JSON serialization
-   - [ ] Implement Ed25519 signature verification
-   - [ ] Implement issuer lookup from directory
-   - [ ] Implement status endpoint checking
-   - [ ] Shared library for use by checks-engine
-
-**Deliverables**:
-- Both proof issuers functional
-- Proofs are signed and verifiable
-- Status endpoints work
-- Demo proofs can be issued
-
-**Definition of Done**:
-- Can issue WorkCompletionProof and VendorEligibilityProof
-- Proofs verify against issuer public keys
-- Status checks work (valid/revoked/expired)
+- All services expose **GET /health** (200 OK with `{ status, service, version }`).
+- All services use the same patterns for **config**, **logging**, **error handling**, and **DB access**.
+- All APIs are **versioned under /v1**.
+- All demo data is **seedable from scripts**, not manual.
+- All integration paths must be **runnable via docker compose**.
+- Every sprint ends with **smoke tests passing**, then a **commit and push** to a demo branch.
 
 ---
 
-### Sprint 3: Rulebook & Checks Engine
-**Goal**: Implement versioned rulebooks and deterministic rule evaluation
+## Target architecture
 
-#### Tasks
-1. **Rulebook Service**
-   - [ ] Design rulebook schema (versioned, JSON rules, reason codes)
-   - [ ] Implement GET /rulebooks/{rulebookId}/versions
-   - [ ] Implement GET /rulebooks/{rulebookId}?version=
-   - [ ] Implement GET /rulebooks/{rulebookId}/reasonCodes?version=
-   - [ ] Implement POST /admin/rulebooks
-   - [ ] Store rulebooks in Postgres (versioned)
+**Services:**  
+directory-service, rulebook-service, works-proof-issuer, vendor-proof-issuer, checks-engine, budget-lock, audit-service, exceptions-service, ifms-dummy, ifms-connector.
 
-2. **Vendor Payment Rulebook v0.1**
-   - [ ] Define 8-12 checks with reason codes:
-     - Missing proof (WorkCompletionProof, VendorEligibilityProof)
-     - Invalid signature
-     - Unauthorized issuer
-     - Expired/revoked proof
-     - Vendor blacklisted
-     - Bank not validated
-     - Missing evidence
-     - Invalid budget head
-     - Invalid amount
-   - [ ] Classify reason codes as HOLD vs DENY
-   - [ ] Define override policy (disallow for invalid signature, unauthorized issuer)
-   - [ ] Create seed data JSON
+**UIs:**  
+bill-processing-ui, audit-viewer-ui.
 
-3. **Checks Engine**
-   - [ ] Design evaluation API (POST /checks/evaluate)
-   - [ ] Implement deterministic rule evaluation
-   - [ ] Implement proof verification integration
-   - [ ] Implement issuer authorization checks
-   - [ ] Implement status/expiry checks
-   - [ ] Generate reason codes and required actions
-   - [ ] Return APPROVE/HOLD/DENY with proofChecks
-   - [ ] Ensure same inputs + version => same outcome
-
-**Deliverables**:
-- Rulebook service functional
-- Vendor payment rulebook v0.1 seeded
-- Checks engine returns deterministic decisions
-- Reason codes properly classified
-
-**Definition of Done**:
-- Can query rulebook by version
-- Checks engine evaluates cases correctly
-- Returns HOLD with correct reason for broken cases
-- Unauthorized issuer blocked even if signature valid
+**Shared packages:**  
+shared-config, shared-db, shared-crypto, shared-http, shared-types.
 
 ---
 
-### Sprint 4: Budget Lock (Atomic Commitment)
-**Goal**: Implement atomic budget reservation with concurrency safety
+## Definition of Done for every sprint
 
-#### Tasks
-1. **Budget Lock Service**
-   - [ ] Design Postgres schema (reservations, budget heads, amounts)
-   - [ ] Implement POST /budget/reserve (caseId, budgetHead, amount, ttlSeconds)
-   - [ ] Implement POST /budget/confirm (reservationId)
-   - [ ] Implement POST /budget/release (reservationId)
-   - [ ] Implement GET /budget/{budgetHead} (debug view)
-   - [ ] Implement idempotency (same caseId retries safe)
-   - [ ] Implement concurrency safety (Postgres transactions/locks)
-   - [ ] Prevent double commit beyond headroom
-
-2. **Concurrency Testing**
-   - [ ] Create test for parallel reserves
-   - [ ] Verify only one succeeds if headroom insufficient
-   - [ ] Verify both succeed if headroom sufficient
-   - [ ] Test idempotency on retries
-
-**Deliverables**:
-- Budget lock service functional
-- Atomic reservation working
-- Concurrency safe
-- Idempotent retries
-
-**Definition of Done**:
-- Parallel reserves cannot both succeed beyond headroom
-- Retries with same caseId are idempotent
-- Confirm/release work correctly
+1. `docker compose up` succeeds on a clean machine.
+2. Relevant endpoints return expected responses.
+3. Minimal automated tests exist for the sprint’s capability.
+4. `scripts/smoke-tests.sh` exits 0.
+5. `docs/SPRINT_STATUS.md` updated with what shipped, how to validate, and known gaps.
 
 ---
 
-### Sprint 5: Audit Trail
-**Goal**: Implement tamper-evident audit records
+## Sprint 0: Foundation and one-command bootstrap
 
-#### Tasks
-1. **Audit Service**
-   - [ ] Design Postgres schema (decision_records, status_events)
-   - [ ] Implement hash chaining per caseId
-   - [ ] Implement POST /audit/decisionRecords
-   - [ ] Implement POST /audit/statusEvents
-   - [ ] Implement GET /audit/cases/{caseId}
-   - [ ] Implement recordHash calculation (previousHash + current data)
-   - [ ] Add tamper-evidence validation
+### Goal
 
-2. **Decision Record Model**
-   - [ ] caseId, rulebookId, rulebookVersion, evaluatedAt
-   - [ ] decision, reasons[], proofRefs[], proofChecks[]
-   - [ ] reservationId, decisionHash, previousHash, recordHash
+One command brings up the full stack, initializes Keycloak, seeds data, and validates via smoke tests.
 
-3. **Status Event Model**
-   - [ ] caseId, source, eventType, eventTime
-   - [ ] refs{voucherNo, paymentRef}
-   - [ ] previousHash, eventHash
+### Deliverables
 
-**Deliverables**:
-- Audit service functional
-- Decision records stored with hash chaining
-- Status events stored with hash chaining
-- Case timeline queryable
+**1. Monorepo scaffolding**
 
-**Definition of Done**:
-- Decision records written with hash chain
-- Status events written with hash chain
-- Can query full case timeline
-- Hash chain validates tamper-evidence
+- `apps/*` for each service and UI
+- `packages/*` for shared libs (shared-config, shared-db, shared-crypto, shared-http, shared-types)
+- Consistent TypeScript build, lint, test commands
 
----
+**2. Docker and orchestration**
 
-### Sprint 6: Exceptions & Redressal
-**Goal**: Implement appeals and authorized overrides
+- `docker-compose.yml` with Postgres, Keycloak, all services, nginx or static hosting for UIs
+- Health checks for every container
+- Dependencies and startup order set using health checks
+- Internal network for service-to-service traffic; only required ports exposed
 
-#### Tasks
-1. **Exceptions Service**
-   - [ ] Design Postgres schema (appeals, overrides)
-   - [ ] Implement POST /exceptions/appeal
-   - [ ] Implement POST /exceptions/override (with permission check)
-   - [ ] Implement GET /exceptions/cases/{caseId}
-   - [ ] Integrate with permissions service (check redressal_authority role)
-   - [ ] Log overrides to audit service
-   - [ ] Enforce override policy (disallow for invalid signature, unauthorized issuer)
+**3. Service stubs (all services runnable)**
 
-2. **Override Authorization**
-   - [ ] Check permissions for override action
-   - [ ] Verify redressal_authority role
-   - [ ] Write override event to audit
+Each service includes:
 
-**Deliverables**:
-- Exceptions service functional
-- Appeals can be created
-- Overrides work only for authorized users
-- Overrides logged to audit
+- **GET /health**
+- A minimal **/v1/info** (optional) to confirm identity
+- DB connectivity check at startup, or on /health with degraded status if configured
+- Standardized error envelope: `{ error: { code, message, details?, traceId } }`
 
-**Definition of Done**:
-- Can create appeals
-- Override only works for authorized redressal authority
-- Overrides logged to audit
-- Unauthorized override attempts blocked
+**4. UI stubs**
+
+- **bill-processing-ui**: “App booted” page and basic auth wiring placeholder
+- **audit-viewer-ui**: “App booted” page and basic auth wiring placeholder
+- Served via nginx or a simple node static server in compose
+
+**5. Bootstrap scripts**
+
+- `scripts/setup.sh` as the only entry point
+- `scripts/init-keycloak.sh` – creates realm, clients, roles, and demo users
+- `scripts/generate-keys.sh` – creates Ed25519 keypairs for participants and stores public keys for seeding
+- `scripts/seed-directory.sh` – participants, endpoints, public keys
+- `scripts/seed-permissions.sh` – permissions
+- `scripts/seed-rulebook.sh` – initial empty rulebook placeholder
+- `scripts/seed-domain-data.sh` – vendors, works, budgets
+- `scripts/smoke-tests.sh` – validates health and minimal endpoints
+- Setup prints credentials and URLs at end
+
+### Sprint 0 acceptance checks
+
+- `./scripts/setup.sh` completes without manual steps
+- All `/health` endpoints return 200
+- Keycloak login works for demo users
+- Smoke tests pass
 
 ---
 
-### Sprint 7: IFMS Integration
-**Goal**: Implement dummy IFMS and connector
+## Sprint 1: Directory, keys, permissions
 
-#### Tasks
-1. **Dummy IFMS**
-   - [ ] Design Postgres schema (vouchers, payments)
-   - [ ] Implement POST /ifms/voucher
-   - [ ] Implement POST /ifms/pay
-   - [ ] Implement GET /ifms/status/{caseId}
-   - [ ] Add delay simulation
-   - [ ] Add optional failure mode for testing
+### Goal
 
-2. **IFMS Connector**
-   - [ ] Design PaymentPassport schema
-   - [ ] Implement POST /connector/submitPayment
-   - [ ] Implement passport validation
-   - [ ] Integrate with IFMS dummy (voucher + pay)
-   - [ ] On success: confirm budget reservation
-   - [ ] On failure: release budget reservation
-   - [ ] Write status events to audit service
+A working participant directory and authorization model for “who can issue what” and “who can override what”.
 
-3. **Payment Passport**
-   - [ ] caseId, amount, budgetHead, vendorId, workId, milestoneId
-   - [ ] rulebookId, rulebookVersion, proofRefs
-   - [ ] reservationId, decision="APPROVE", decisionHash, issuedAt
+### Directory data model
 
-**Deliverables**:
-- Dummy IFMS functional
-- Connector submits passports
-- Budget confirmed/released based on IFMS result
-- Status events written to audit
+- **Participants**: participantId, name, roles[], status, createdAt
+- **Endpoints**: participantId, service, baseUrl
+- **Keys**: participantId, keyId, alg=Ed25519, publicKey, status, createdAt
+- **Permissions**: participantId, action, proofType?, resource?, conditionsJson?, effect=ALLOW|DENY
 
-**Definition of Done**:
-- Connector accepts payment passport
-- Calls IFMS voucher and pay
-- Budget confirmed on success, released on failure
-- Status events in audit timeline
+### Directory API (v1)
 
----
+- `GET /v1/participants/:participantId`
+- `GET /v1/participants?role=&proofType=`
+- `GET /v1/participants/:participantId/keys`
+- `GET /v1/permissions/:participantId`
+- `GET /v1/permissions/isAllowed?participantId=&action=&proofType=`
 
-### Sprint 8: Bill Processing UI
-**Goal**: Build minimal but credible UI for bill processing
+**Admin bootstrap endpoints (Keycloak-protected):**
 
-#### Tasks
-1. **UI Framework Setup**
-   - [ ] Choose framework (React/Vue/vanilla)
-   - [ ] Set up build pipeline
-   - [ ] Configure API client
+- `POST /v1/admin/participants/bulk`
+- `POST /v1/admin/permissions/bulk`
 
-2. **Bill Processing Features**
-   - [ ] Create case form (workId, milestoneId, vendorId, amount, budgetHead)
-   - [ ] Fetch proofs (WorkCompletionProof, VendorEligibilityProof)
-   - [ ] Evaluate case (call checks engine)
-   - [ ] Display decision (APPROVE/HOLD/DENY)
-   - [ ] Display reason codes and required actions
-   - [ ] Submit to IFMS (via connector)
-   - [ ] Appeal action (if HOLD/DENY)
-   - [ ] Override action (if authorized)
-   - [ ] Show case status
+### Key management
 
-**Deliverables**:
-- Bill processing UI functional
-- Can create and process cases
-- Shows decisions and reasons
-- Can submit to IFMS
-- Can appeal/override
+- keyId generation standard (deterministic format or uuid, but consistent)
+- Private keys never stored in directory DB
+- Issuer services load their private keys via env or mounted secrets generated by `scripts/generate-keys.sh`
 
-**Definition of Done**:
-- UI allows full bill processing flow
-- Displays decisions and reasons clearly
-- Can submit to IFMS
-- Appeal/override actions work
+### Sprint 1 acceptance checks
+
+- Directory returns endpoints and keys for all participants
+- Permission checks allow authorized issuers and deny unauthorized issuers
+- Admin endpoints reject non-admin tokens
 
 ---
 
-### Sprint 9: Audit Viewer UI
-**Goal**: Build minimal UI for viewing audit trails
+## Sprint 2: Proof issuance and verification
 
-#### Tasks
-1. **Audit Viewer Features**
-   - [ ] Search by caseId
-   - [ ] Display decision trace (decision record with reasons)
-   - [ ] Display status events timeline
-   - [ ] Display exceptions (appeals, overrides)
-   - [ ] Show hash chain (for tamper-evidence demo)
-   - [ ] Filter by event type
-   - [ ] Export case timeline
+### Goal
 
-**Deliverables**:
-- Audit viewer UI functional
-- Can search and view cases
-- Shows complete timeline
-- Displays hash chain
+Two issuers produce signed proofs; the platform can verify them deterministically.
 
-**Definition of Done**:
-- Can search by caseId
-- Shows decision + status timeline
-- Shows exceptions
-- Hash chain visible
+### Proof format (common envelope)
+
+proofId, proofType, issuerId, issuedAt, expiresAt?, subject, claims, evidenceRefs?, signature, keyId, canonicalHash
+
+**Canonical JSON requirement:**
+
+- shared-crypto provides canonical serialization and hashing
+- Signature is computed over canonical JSON of the unsigned payload; canonicalHash computed consistently
+
+### Works Proof Issuer
+
+**WorkCompletionProof claims include:**  
+workId, milestoneId, measurementBookRef?, completionDate, amountCertified, geoTag?, engineerId?
+
+**APIs:**
+
+- `POST /v1/proofs/issue`
+- `GET /v1/proofs/:proofId/status` (VALID | REVOKED | EXPIRED | UNKNOWN)
+
+**Admin seed endpoint (protected):** `POST /v1/admin/proofs/seed` (optional for demo)
+
+### Vendor Proof Issuer
+
+**VendorEligibilityProof claims include:**  
+vendorId, registered, blacklisted=false|true, bankValidated, taxStatus?, complianceFlags?
+
+APIs mirror works issuer.
+
+### Shared verification library
+
+- `verifySignature(proof)` – uses directory to fetch issuer public key by keyId
+- `verifyIssuerAuthorized(issuerId, proofType)` – uses directory permissions
+- `verifyStatus(proofRef)` – calls issuer status endpoint or checks local store if same service
+- `verifyExpiry(proof)` – checks expiresAt
+
+### Sprint 2 acceptance checks
+
+- Can issue both proofs and verify signature using directory public keys
+- Status endpoint returns VALID and can simulate revoked/expired
+- Unauthorized issuer fails even if signature is mathematically valid
 
 ---
 
-### Sprint 10: Integration, Testing & Documentation
-**Goal**: End-to-end integration, smoke tests, and demo script
+## Sprint 3: Rulebook and checks-engine (deterministic decisions)
 
-#### Tasks
-1. **Smoke Tests**
-   - [ ] Participant lookup returns keys/endpoints
-   - [ ] Permission check blocks unauthorized issuer
-   - [ ] Works and vendor issuers can issue and verify signed proofs
-   - [ ] Checks engine returns HOLD with correct reason for broken case
-   - [ ] Atomic budget lock prevents double commit under parallel reserve
-   - [ ] Connector submits passport, IFMS dummy posts voucher and pays
-   - [ ] Audit has decision + status timeline
-   - [ ] Override path works only for authorized redressal authority and is logged
+### Goal
 
-2. **End-to-End Integration**
-   - [ ] Test happy path end-to-end
-   - [ ] Test HOLD scenario with fix
-   - [ ] Test parallel reserve atomicity
-   - [ ] Test redressal override flow
-   - [ ] Fix any integration issues
+Versioned rulebooks and deterministic evaluation that returns APPROVE, HOLD, or DENY with reason codes.
 
-3. **Documentation**
-   - [ ] Create `docs/api-specs.md` (all service APIs)
-   - [ ] Create `docs/demo-script.md` (10-12 minute walkthrough)
-   - [ ] Create `README.md` (setup instructions)
-   - [ ] Document data models
-   - [ ] Document reason codes
+### Rulebook Service model
 
-4. **Final Polish**
-   - [ ] Error handling improvements
-   - [ ] Logging improvements
-   - [ ] Performance checks
-   - [ ] Security review (demo-level)
+rulebookId, version, rulesJson, reasonCodesJson, createdAt, createdBy
 
-**Deliverables**:
-- All smoke tests passing
-- End-to-end flows working
-- Complete documentation
-- Demo script ready
+**APIs:**
 
-**Definition of Done**:
+- `GET /v1/rulebooks/:rulebookId/versions`
+- `GET /v1/rulebooks/:rulebookId?version=`
+- `GET /v1/rulebooks/:rulebookId/reasonCodes?version=`
+
+**Admin:** `POST /v1/admin/rulebooks`
+
+### Vendor payment rulebook v0.1
+
+Create 8 to 12 checks and reason codes, each marked HOLD or DENY and whether override is allowed. Mandatory disallow overrides for invalid signature and unauthorized issuer.
+
+### Checks Engine API
+
+**Input:**  
+caseId, vendorId, workId, milestoneId, amount, budgetHead, proofRefs[], rulebookId, rulebookVersion
+
+**Output:**  
+decision, reasons[{ code, severity, message, overrideAllowed }], proofChecks[], requiredActions[]
+
+**Evaluation requirements:**
+
+- Proof verification uses shared verification library
+- Issuer authorization enforced
+- Status and expiry enforced
+- Deterministic: same input and same rulebook version yields identical output ordering and hashes
+
+### Sprint 3 acceptance checks
+
+- Rulebook v0.1 retrievable by version
+- Checks-engine returns HOLD for missing or invalid proofs with correct reason codes
+- Checks-engine returns DENY for disallowed conditions; overrideAllowed is false for signature and issuer authorization failures
+
+---
+
+## Sprint 4: Budget lock (atomic reservation)
+
+### Goal
+
+Atomic budget reservation and commit with concurrency safety and idempotency.
+
+### Budget model
+
+- **BudgetHead**: budgetHead, total, committed, reserved
+- **Reservation**: reservationId, caseId, budgetHead, amount, status=RESERVED|CONFIRMED|RELEASED|EXPIRED, createdAt, expiresAt
+
+### APIs
+
+- `POST /v1/budget/reserve` { caseId, budgetHead, amount, ttlSeconds }
+- `POST /v1/budget/confirm` { reservationId }
+- `POST /v1/budget/release` { reservationId }
+- `GET /v1/budget/:budgetHead` (debug)
+
+### Technical requirements
+
+- Idempotency by caseId for reserve
+- Concurrency via transactions and locking (SELECT FOR UPDATE or advisory locks)
+- Cannot exceed available headroom
+
+### Sprint 4 acceptance checks
+
+- Parallel reserves cannot over-allocate
+- Retries with same caseId return same reservation result
+- Confirm increases committed and reduces reserved correctly
+- Release frees reserved correctly
+
+---
+
+## Sprint 5: Audit service (tamper-evident record)
+
+### Goal
+
+Write decision records and status events with hash chaining per caseId.
+
+### Audit models
+
+- **DecisionRecord**: caseId, rulebookId, rulebookVersion, evaluatedAt, decision, reasons, proofRefs, proofChecks, reservationId?, decisionHash, previousHash, recordHash
+- **StatusEvent**: caseId, source, eventType, eventTime, refs, previousHash, eventHash
+
+### APIs
+
+- `POST /v1/audit/decisionRecords`
+- `POST /v1/audit/statusEvents`
+- `GET /v1/audit/cases/:caseId` (returns full timeline and validation result)
+- `GET /v1/audit/cases/:caseId/validate` (optional separate endpoint)
+
+### Hash requirements
+
+- Per-case chain: `recordHash = hash(previousHash + canonical(data))`
+- Validate endpoint recalculates and reports tampering or breaks
+
+### Sprint 5 acceptance checks
+
+- Writing records produces a valid chain
+- Timeline query returns decision plus events in order
+- Validation reports OK on untouched data
+
+---
+
+## Sprint 6: Exceptions and redressal
+
+### Goal
+
+Appeals and overrides with strict authorization and rulebook override policy enforcement.
+
+### Exceptions models
+
+- **Appeal**: appealId, caseId, raisedBy, reason, status, createdAt
+- **Override**: overrideId, caseId, performedBy, reasonCodesOverridden[], justification, createdAt
+
+### APIs
+
+- `POST /v1/exceptions/appeal`
+- `POST /v1/exceptions/override`
+- `GET /v1/exceptions/cases/:caseId`
+
+### Authorization and policy
+
+- Override requires Keycloak role `redressal_authority`
+- exceptions-service checks directory permissions for override action
+- Override disallowed for specific reason codes where overrideAllowed is false
+- Every override is logged to audit-service as a status event and optionally a decision record annotation
+
+### Sprint 6 acceptance checks
+
+- Appeal creation works
+- Override rejected if not authorized
+- Override rejected if it attempts disallowed overrides
+- Successful override appears in audit timeline
+
+---
+
+## Sprint 7: IFMS dummy and connector
+
+### Goal
+
+Simulate IFMS voucher and payment; connector submits payment passports and manages budget confirm or release.
+
+### IFMS Dummy
+
+**Models:** Voucher, Payment with caseId linkage
+
+**APIs:**
+
+- `POST /v1/ifms/voucher`
+- `POST /v1/ifms/pay`
+- `GET /v1/ifms/status/:caseId`
+
+**Features:** delay simulation; optional failure mode flags for demo
+
+### IFMS Connector
+
+**PaymentPassport:**  
+caseId, amount, budgetHead, vendorId, workId, milestoneId, rulebookId, rulebookVersion, proofRefs, reservationId, decision, decisionHash, issuedAt
+
+**APIs:** `POST /v1/connector/submitPayment`
+
+**Flow:**
+
+- Validate passport decision is APPROVE
+- Call ifms-dummy voucher then pay
+- On success: confirm reservation
+- On failure: release reservation
+- Write status events to audit-service
+
+### Sprint 7 acceptance checks
+
+- Connector submits; IFMS issues voucher and marks paid
+- Budget reservation confirmed on success
+- Budget reservation released on failure
+- Audit timeline shows voucher and payment events
+
+---
+
+## Sprint 8: Bill processing UI
+
+### Goal
+
+A minimal UI that drives the end-to-end bill flow.
+
+### Pages and actions
+
+- Login via Keycloak
+- Create case form (workId, milestoneId, vendorId, amount, budgetHead)
+- Fetch proofs or request issuance (for demo, either auto-issue or select existing proofRefs)
+- Evaluate via checks-engine and render decision plus reason codes
+- Reserve budget if APPROVE, then submit passport to connector
+- Show status and allow appeal on HOLD or DENY
+- Show override action only when user has role and policy allows
+
+### Sprint 8 acceptance checks
+
+- Full happy path from UI results in IFMS paid and audit updated
+- HOLD scenario creates appeal and shows it in status
+- Override works only for authorized user and updates audit
+
+---
+
+## Sprint 9: Audit viewer UI
+
+### Goal
+
+A minimal UI that visualizes the case timeline and hash chain.
+
+### Features
+
+- Search by caseId
+- View decision record and reason codes
+- View status events timeline
+- View appeals and overrides
+- Show hash chain segments and validation result
+- Filter by event type
+- Export timeline JSON
+
+### Sprint 9 acceptance checks
+
+- Can locate and display a case end-to-end
+- Hash validation status is visible
+- Export produces complete timeline payload
+
+---
+
+## Sprint 10: Integration, smoke tests, docs, demo script
+
+### Goal
+
+Make the demo reliable, repeatable, and presentable in 10 to 12 minutes.
+
+### Smoke test suite (scripts/smoke-tests.sh)
+
+Must cover:
+
+- Directory lookup keys and endpoints
+- Permission check denies unauthorized issuer
+- Both issuers issue and verify proofs
+- Checks-engine HOLD for broken case with correct reason code
+- Budget-lock concurrency and idempotency
+- Connector happy path and failure path
+- Audit timeline includes decision and status events
+- Override allowed only for authorized redressal authority and logged
+
+### End-to-end scenarios (documented and runnable)
+
+- **Happy path**: proofs valid, checks approve, reserve, IFMS pay, audit shows all
+- **Hold path**: missing evidence or bank not validated, appeal created, then fix and re-evaluate
+- **Redressal path**: hold reason override allowed, override logged, proceed to payment
+- **Concurrency path**: parallel reserves demonstrate atomic safety
+
+### Documentation deliverables
+
+- `docs/api-specs.md` – all v1 endpoints with sample requests and responses
+- `docs/demo-script.md` – exact clicks and terminal commands, timed walkthrough
+- `README.md` – one-command setup and troubleshooting
+- `docs/data-models.md` and `docs/reason-codes.md`
+
+### Sprint 10 acceptance checks
+
+- `./scripts/setup.sh` works reliably
 - All smoke tests pass
-- Happy path works end-to-end
-- Demo script documented
-- README complete
-
----
-
-## Dependencies & Ordering
-
-```
-Sprint 0 (Infra) → All other sprints
-Sprint 1 (Directory) → Sprint 2 (Proofs), Sprint 3 (Checks), Sprint 6 (Exceptions)
-Sprint 2 (Proofs) → Sprint 3 (Checks)
-Sprint 3 (Checks) → Sprint 4 (Budget), Sprint 5 (Audit), Sprint 7 (IFMS)
-Sprint 4 (Budget) → Sprint 7 (IFMS)
-Sprint 5 (Audit) → Sprint 6 (Exceptions), Sprint 7 (IFMS), Sprint 9 (Audit UI)
-Sprint 6 (Exceptions) → Sprint 8 (Bill UI)
-Sprint 7 (IFMS) → Sprint 8 (Bill UI)
-Sprint 8 (Bill UI) → Sprint 10 (Integration)
-Sprint 9 (Audit UI) → Sprint 10 (Integration)
-```
-
-## Risk Mitigation
-
-1. **Concurrency in Budget Lock**: Use Postgres advisory locks or SELECT FOR UPDATE
-2. **Hash Chain Complexity**: Start simple, add validation later if needed
-3. **Keycloak Integration**: Use admin API, test early
-4. **Proof Verification**: Use well-tested Ed25519 library
-5. **UI Complexity**: Keep minimal, focus on functionality over polish
-
-## Success Criteria
-
-- One command (`make setup` or `./scripts/setup.sh`) brings up entire demo
-- All smoke tests pass
-- Happy path works end-to-end
-- Demo script can be followed in 10-12 minutes
-- All core concepts demonstrated (proofs, rules, budget, audit, redressal)
+- Demo script completes in 10 to 12 minutes with no manual DB edits
+- Docs are consistent with deployed behavior
