@@ -135,6 +135,58 @@ else
   fail=1
 fi
 
+# Sprint 3: Rulebook and checks-engine (exposed 8084 rulebook, 8085 checks)
+code_rb=$(curl -s -o /tmp/rulebook.json -w "%{http_code}" "http://127.0.0.1:8084/v1/rulebooks/vendor-payment?version=v0.1" 2>/dev/null || echo "000")
+if [ "$code_rb" = "200" ]; then
+  if grep -q '"version"' /tmp/rulebook.json 2>/dev/null && grep -q 'v0.1' /tmp/rulebook.json 2>/dev/null; then
+    echo "  OK rulebook GET vendor-payment v0.1"
+  else
+    echo "  FAIL rulebook response missing version"
+    fail=1
+  fi
+else
+  echo "  FAIL rulebook GET (got $code_rb). Run seed-rulebook.sh after rulebook is up."
+  fail=1
+fi
+
+# Checks-engine: missing proofs -> DENY with reason codes
+eval_missing=$(curl -s -X POST "http://127.0.0.1:8085/v1/checks/evaluate" \
+  -H "Content-Type: application/json" \
+  -d '{"caseId":"c-missing","vendorId":"v1","workId":"w1","milestoneId":"m1","amount":1000,"budgetHead":"h1","proofRefs":[],"rulebookId":"vendor-payment","rulebookVersion":"v0.1"}' 2>/dev/null)
+decision_missing=$(echo "$eval_missing" | jq -r .decision 2>/dev/null || echo "")
+if [ "$decision_missing" = "DENY" ]; then
+  echo "  OK checks-engine missing proofs -> DENY"
+else
+  echo "  FAIL checks-engine missing proofs expected DENY (got $decision_missing)"
+  fail=1
+fi
+
+# Checks-engine: valid work + vendor proofs -> APPROVE
+work_pid=$(jq -r .proofId /tmp/work-proof.json 2>/dev/null)
+vendor_pid=$(jq -r .proofId /tmp/vendor-proof.json 2>/dev/null)
+eval_body=$(jq -n \
+  --arg cid "c-ok" --arg vid "v1" --arg wid "w1" --arg mid "m1" \
+  --arg wid2 "$work_pid" --arg vid2 "$vendor_pid" \
+  '{caseId:$cid,vendorId:$vid,workId:$wid,milestoneId:$mid,amount:1000,budgetHead:"h1",rulebookId:"vendor-payment",rulebookVersion:"v0.1",proofRefs:[{proofId:$wid2,proofType:"WorkCompletionProof",issuerId:"did:web:works.demo.gov"},{proofId:$vid2,proofType:"VendorEligibilityProof",issuerId:"did:web:vendor.demo.gov"}]}')
+eval_ok=$(curl -s -X POST "http://127.0.0.1:8085/v1/checks/evaluate" -H "Content-Type: application/json" -d "$eval_body" 2>/dev/null)
+decision_ok=$(echo "$eval_ok" | jq -r .decision 2>/dev/null || echo "")
+if [ "$decision_ok" = "APPROVE" ]; then
+  echo "  OK checks-engine valid proofs -> APPROVE"
+else
+  echo "  FAIL checks-engine valid proofs expected APPROVE (got $decision_ok)"
+  fail=1
+fi
+
+# Rulebook: signature/issuer reason codes have overrideAllowed false
+override_invalid=$(curl -s "http://127.0.0.1:8084/v1/rulebooks/vendor-payment/reasonCodes?version=v0.1" 2>/dev/null | jq -r '.reasonCodes.INVALID_PROOF_SIGNATURE.overrideAllowed' 2>/dev/null)
+override_unauth=$(curl -s "http://127.0.0.1:8084/v1/rulebooks/vendor-payment/reasonCodes?version=v0.1" 2>/dev/null | jq -r '.reasonCodes.UNAUTHORIZED_ISSUER.overrideAllowed' 2>/dev/null)
+if [ "$override_invalid" = "false" ] && [ "$override_unauth" = "false" ]; then
+  echo "  OK rulebook DENY reason codes overrideAllowed false for signature/issuer"
+else
+  echo "  FAIL rulebook expected overrideAllowed false (got $override_invalid, $override_unauth)"
+  fail=1
+fi
+
 if [ $fail -eq 1 ]; then
   echo "Some smoke tests failed."
   exit 1

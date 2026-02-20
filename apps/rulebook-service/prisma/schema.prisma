@@ -1,0 +1,21 @@
+generator client {
+  provider      = "prisma-client-js"
+  output        = "../src/generated/prisma"
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x", "linux-musl-arm64-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Rulebook {
+  id             String   @id @default(uuid())
+  rulebookId     String
+  version        String
+  rulesJson      String   @map("rules_json")
+  reasonCodesJson String  @map("reason_codes_json")
+  createdAt      DateTime @default(now())
+  createdBy      String?  @map("created_by")
+  @@unique([rulebookId, version])
+}

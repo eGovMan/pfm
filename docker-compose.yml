@@ -76,6 +76,9 @@ services:
       PORT: 8080
       NODE_ENV: production
       DATABASE_URL: postgresql://pfm:pfm_secret@postgres:5432/pfm
+      RULEBOOK_SEED_SECRET: ${DIRECTORY_SEED_SECRET:-pfm-demo-seed-secret}
+    ports:
+      - "8084:8080"
     depends_on:
       postgres:
         condition: service_healthy
@@ -146,9 +149,20 @@ services:
     environment:
       PORT: 8080
       NODE_ENV: production
-      DATABASE_URL: postgresql://pfm:pfm_secret@postgres:5432/pfm
+      RULEBOOK_BASE_URL: http://rulebook-service:8080
+      DIRECTORY_BASE_URL: http://directory-service:8080
+      WORKS_PROOF_ISSUER_BASE_URL: http://works-proof-issuer:8080
+      VENDOR_PROOF_ISSUER_BASE_URL: http://vendor-proof-issuer:8080
+    ports:
+      - "8085:8080"
     depends_on:
-      postgres:
+      rulebook-service:
+        condition: service_healthy
+      directory-service:
+        condition: service_healthy
+      works-proof-issuer:
+        condition: service_healthy
+      vendor-proof-issuer:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "node", "-e", "require('http').get('http://127.0.0.1:8080/health', (r)=>{ let b=''; r.on('data',c=>b+=c); r.on('end',()=>process.exit(r.statusCode===200?0:1)); }).on('error',()=>process.exit(1));"]

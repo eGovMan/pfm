@@ -38,6 +38,9 @@ coverage/
 # Generated keys (run scripts/generate-keys.sh)
 infra/keys/
 
+# Prisma generated client (per-service output)
+apps/*/src/generated/
+
 # Keycloak / runtime data (if exported at runtime)
 # Keep infra/seed/ and realm JSON in repo; ignore runtime DB/volumes as needed
 # (volumes are outside repo; no need to ignore)

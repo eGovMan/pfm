@@ -106,3 +106,30 @@ docker compose up -d           # ensure 8082/8083 exposed
 ### Known gaps / tech debt
 - Setup order: run generate-keys before seed-directory so directory gets public keys; re-run seed-directory after generate-keys if directory was seeded earlier
 - Prisma binaryTargets set for linux-musl OpenSSL 3 (Alpine); directory-service Dockerfile adds `apk add openssl`
+
+---
+
+## Sprint 3: Rulebook and checks-engine (deterministic decisions)
+
+### Goal
+Versioned rulebooks and deterministic evaluation returning APPROVE, HOLD, or DENY with reason codes.
+
+### Completed
+- [x] Rulebook service: Prisma model (Rulebook); GET /v1/rulebooks/:id/versions, GET /v1/rulebooks/:id?version=, GET /v1/rulebooks/:id/reasonCodes?version=; POST /v1/admin/rulebooks (Keycloak or X-Seed-Secret)
+- [x] Vendor payment rulebook v0.1: 10 checks/reason codes; overrideAllowed false for signature/issuer
+- [x] seed-rulebook.sh: POSTs rulebook v0.1 to rulebook-service (port 8084)
+- [x] Checks-engine: POST /v1/checks/evaluate; fetches rulebook, directory, issuers; verifies proofs via shared-crypto; returns decision, reasons[], proofChecks[]
+- [x] Docker: rulebook 8084, checks-engine 8085; RULEBOOK_SEED_SECRET for rulebook admin
+
+### How to validate
+```bash
+docker compose up -d
+./scripts/generate-keys.sh
+./scripts/seed-directory.sh
+./scripts/seed-permissions.sh
+./scripts/seed-rulebook.sh
+./scripts/smoke-tests.sh
+```
+
+### Known gaps / tech debt
+- If Postgres is recreated, re-run seed-directory and seed-rulebook

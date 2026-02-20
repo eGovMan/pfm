@@ -1,0 +1,28 @@
+{
+  "rulebookId": "vendor-payment",
+  "version": "v0.1",
+  "rules": [
+    { "checkId": "work-completion-required", "name": "WorkCompletionProofRequired", "type": "proof_check", "proofType": "WorkCompletionProof", "required": true, "reasonCode": "MISSING_WORK_COMPLETION_PROOF", "severity": "DENY" },
+    { "checkId": "vendor-eligibility-required", "name": "VendorEligibilityProofRequired", "type": "proof_check", "proofType": "VendorEligibilityProof", "required": true, "reasonCode": "MISSING_VENDOR_ELIGIBILITY_PROOF", "severity": "DENY" },
+    { "checkId": "proof-signature-valid", "name": "ProofSignatureValid", "type": "proof_check", "reasonCode": "INVALID_PROOF_SIGNATURE", "severity": "DENY" },
+    { "checkId": "proof-issuer-authorized", "name": "ProofIssuerAuthorized", "type": "proof_check", "reasonCode": "UNAUTHORIZED_ISSUER", "severity": "DENY" },
+    { "checkId": "proof-not-revoked", "name": "ProofNotRevoked", "type": "proof_check", "reasonCode": "PROOF_REVOKED", "severity": "DENY" },
+    { "checkId": "proof-not-expired", "name": "ProofNotExpired", "type": "proof_check", "reasonCode": "PROOF_EXPIRED", "severity": "DENY" },
+    { "checkId": "vendor-bank-validated", "name": "VendorBankValidated", "type": "claim_check", "proofType": "VendorEligibilityProof", "claimPath": "bankValidated", "expected": true, "reasonCode": "VENDOR_BANK_NOT_VALIDATED", "severity": "HOLD" },
+    { "checkId": "vendor-not-blacklisted", "name": "VendorNotBlacklisted", "type": "claim_check", "proofType": "VendorEligibilityProof", "claimPath": "blacklisted", "expected": false, "reasonCode": "VENDOR_BLACKLISTED", "severity": "DENY" },
+    { "checkId": "work-milestone-match", "name": "WorkMilestoneMatch", "type": "claim_check", "proofType": "WorkCompletionProof", "reasonCode": "WORK_MILESTONE_MISMATCH", "severity": "DENY" },
+    { "checkId": "vendor-id-match", "name": "VendorIdMatch", "type": "claim_check", "proofType": "VendorEligibilityProof", "reasonCode": "VENDOR_ID_MISMATCH", "severity": "DENY" }
+  ],
+  "reasonCodes": {
+    "MISSING_WORK_COMPLETION_PROOF": { "code": "MISSING_WORK_COMPLETION_PROOF", "message": "Work completion proof is required", "severity": "DENY", "overrideAllowed": false },
+    "MISSING_VENDOR_ELIGIBILITY_PROOF": { "code": "MISSING_VENDOR_ELIGIBILITY_PROOF", "message": "Vendor eligibility proof is required", "severity": "DENY", "overrideAllowed": false },
+    "INVALID_PROOF_SIGNATURE": { "code": "INVALID_PROOF_SIGNATURE", "message": "Proof signature is invalid", "severity": "DENY", "overrideAllowed": false },
+    "UNAUTHORIZED_ISSUER": { "code": "UNAUTHORIZED_ISSUER", "message": "Proof issuer is not authorized for this proof type", "severity": "DENY", "overrideAllowed": false },
+    "PROOF_REVOKED": { "code": "PROOF_REVOKED", "message": "Proof has been revoked", "severity": "DENY", "overrideAllowed": false },
+    "PROOF_EXPIRED": { "code": "PROOF_EXPIRED", "message": "Proof has expired", "severity": "DENY", "overrideAllowed": false },
+    "VENDOR_BANK_NOT_VALIDATED": { "code": "VENDOR_BANK_NOT_VALIDATED", "message": "Vendor bank account not validated", "severity": "HOLD", "overrideAllowed": true },
+    "VENDOR_BLACKLISTED": { "code": "VENDOR_BLACKLISTED", "message": "Vendor is blacklisted", "severity": "DENY", "overrideAllowed": false },
+    "WORK_MILESTONE_MISMATCH": { "code": "WORK_MILESTONE_MISMATCH", "message": "Work proof does not match payment milestone", "severity": "DENY", "overrideAllowed": false },
+    "VENDOR_ID_MISMATCH": { "code": "VENDOR_ID_MISMATCH", "message": "Vendor proof does not match payment vendor", "severity": "DENY", "overrideAllowed": false }
+  }
+}

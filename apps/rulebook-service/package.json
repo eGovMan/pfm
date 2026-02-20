@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "build": "tsc",
+    "build": "prisma generate && tsc && cp -r src/generated dist/",
     "start": "node dist/index.js",
     "lint": "eslint src --ext .ts",
     "typecheck": "tsc --noEmit"
@@ -11,7 +11,9 @@
   "dependencies": {
     "@pfm/shared-db": "*",
     "@pfm/shared-http": "*",
-    "@pfm/shared-config": "*"
+    "@pfm/shared-config": "*",
+    "@prisma/client": "^5.8.0",
+    "prisma": "^5.8.0"
   },
   "devDependencies": {
     "@types/node": "^20.10.0",
