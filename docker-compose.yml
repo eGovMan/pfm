@@ -1,0 +1,271 @@
+# PFM Stack Demo – all services on internal port 8080; Keycloak 8088; UIs 3000, 3001
+# Internal network: pfm-network. Only required ports exposed to host.
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: pfm
+      POSTGRES_PASSWORD: pfm_secret
+      POSTGRES_DB: pfm
+    volumes:
+      - pfm_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pfm -d pfm"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - pfm-network
+
+  keycloak:
+    image: keycloak/keycloak:23.0
+    command: ["start-dev", "--import-realm"]
+    environment:
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://postgres:5432/pfm
+      KC_DB_USERNAME: pfm
+      KC_DB_PASSWORD: pfm_secret
+      KC_HEALTH_ENABLED: "true"
+      KC_HTTP_PORT: 8080
+    ports:
+      - "8088:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "exec 3<>/dev/tcp/127.0.0.1/8080 && echo -e 'GET /health/ready HTTP/1.1\\r\\nHost: 127.0.0.1\\r\\nConnection: close\\r\\n\\r\\n' >&3 && cat <&3 | grep -q '200 OK'"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    networks:
+      - pfm-network
+
+  directory-service:
+    build:
+      context: .
+      dockerfile: apps/directory-service/Dockerfile
+    environment:
+      PORT: 8080
+      NODE_ENV: production
+      DATABASE_URL: postgresql://pfm:pfm_secret@postgres:5432/pfm
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://127.0.0.1:8080/health', (r)=>{ let b=''; r.on('data',c=>b+=c); r.on('end',()=>process.exit(r.statusCode===200?0:1)); }).on('error',()=>process.exit(1));"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      - pfm-network
+
+  rulebook-service:
+    build:
+      context: .
+      dockerfile: apps/rulebook-service/Dockerfile
+    environment:
+      PORT: 8080
+      NODE_ENV: production
+      DATABASE_URL: postgresql://pfm:pfm_secret@postgres:5432/pfm
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://127.0.0.1:8080/health', (r)=>{ let b=''; r.on('data',c=>b+=c); r.on('end',()=>process.exit(r.statusCode===200?0:1)); }).on('error',()=>process.exit(1));"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      - pfm-network
+
+  works-proof-issuer:
+    build:
+      context: .
+      dockerfile: apps/works-proof-issuer/Dockerfile
+    environment:
+      PORT: 8080
+      NODE_ENV: production
+      DATABASE_URL: postgresql://pfm:pfm_secret@postgres:5432/pfm
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://127.0.0.1:8080/health', (r)=>{ let b=''; r.on('data',c=>b+=c); r.on('end',()=>process.exit(r.statusCode===200?0:1)); }).on('error',()=>process.exit(1));"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      - pfm-network
+
+  vendor-proof-issuer:
+    build:
+      context: .
+      dockerfile: apps/vendor-proof-issuer/Dockerfile
+    environment:
+      PORT: 8080
+      NODE_ENV: production
+      DATABASE_URL: postgresql://pfm:pfm_secret@postgres:5432/pfm
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://127.0.0.1:8080/health', (r)=>{ let b=''; r.on('data',c=>b+=c); r.on('end',()=>process.exit(r.statusCode===200?0:1)); }).on('error',()=>process.exit(1));"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      - pfm-network
+
+  checks-engine:
+    build:
+      context: .
+      dockerfile: apps/checks-engine/Dockerfile
+    environment:
+      PORT: 8080
+      NODE_ENV: production
+      DATABASE_URL: postgresql://pfm:pfm_secret@postgres:5432/pfm
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://127.0.0.1:8080/health', (r)=>{ let b=''; r.on('data',c=>b+=c); r.on('end',()=>process.exit(r.statusCode===200?0:1)); }).on('error',()=>process.exit(1));"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      - pfm-network
+
+  budget-lock:
+    build:
+      context: .
+      dockerfile: apps/budget-lock/Dockerfile
+    environment:
+      PORT: 8080
+      NODE_ENV: production
+      DATABASE_URL: postgresql://pfm:pfm_secret@postgres:5432/pfm
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://127.0.0.1:8080/health', (r)=>{ let b=''; r.on('data',c=>b+=c); r.on('end',()=>process.exit(r.statusCode===200?0:1)); }).on('error',()=>process.exit(1));"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      - pfm-network
+
+  audit-service:
+    build:
+      context: .
+      dockerfile: apps/audit-service/Dockerfile
+    environment:
+      PORT: 8080
+      NODE_ENV: production
+      DATABASE_URL: postgresql://pfm:pfm_secret@postgres:5432/pfm
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://127.0.0.1:8080/health', (r)=>{ let b=''; r.on('data',c=>b+=c); r.on('end',()=>process.exit(r.statusCode===200?0:1)); }).on('error',()=>process.exit(1));"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      - pfm-network
+
+  exceptions-service:
+    build:
+      context: .
+      dockerfile: apps/exceptions-service/Dockerfile
+    environment:
+      PORT: 8080
+      NODE_ENV: production
+      DATABASE_URL: postgresql://pfm:pfm_secret@postgres:5432/pfm
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://127.0.0.1:8080/health', (r)=>{ let b=''; r.on('data',c=>b+=c); r.on('end',()=>process.exit(r.statusCode===200?0:1)); }).on('error',()=>process.exit(1));"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      - pfm-network
+
+  ifms-dummy:
+    build:
+      context: .
+      dockerfile: apps/ifms-dummy/Dockerfile
+    environment:
+      PORT: 8080
+      NODE_ENV: production
+      DATABASE_URL: postgresql://pfm:pfm_secret@postgres:5432/pfm
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://127.0.0.1:8080/health', (r)=>{ let b=''; r.on('data',c=>b+=c); r.on('end',()=>process.exit(r.statusCode===200?0:1)); }).on('error',()=>process.exit(1));"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      - pfm-network
+
+  ifms-connector:
+    build:
+      context: .
+      dockerfile: apps/ifms-connector/Dockerfile
+    environment:
+      PORT: 8080
+      NODE_ENV: production
+      DATABASE_URL: postgresql://pfm:pfm_secret@postgres:5432/pfm
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://127.0.0.1:8080/health', (r)=>{ let b=''; r.on('data',c=>b+=c); r.on('end',()=>process.exit(r.statusCode===200?0:1)); }).on('error',()=>process.exit(1));"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      - pfm-network
+
+  bill-processing-ui:
+    build:
+      context: .
+      dockerfile: apps/bill-processing-ui/Dockerfile
+    ports:
+      - "3000:80"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "-", "http://localhost:80/"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      - pfm-network
+
+  audit-viewer-ui:
+    build:
+      context: .
+      dockerfile: apps/audit-viewer-ui/Dockerfile
+    ports:
+      - "3001:80"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "-", "http://localhost:80/"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      - pfm-network
+
+volumes:
+  pfm_postgres_data:
+  pfm_keycloak_data:
+
+networks:
+  pfm-network:
+    driver: bridge
