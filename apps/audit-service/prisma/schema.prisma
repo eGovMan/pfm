@@ -1,0 +1,41 @@
+generator client {
+  provider      = "prisma-client-js"
+  output        = "../src/generated/prisma"
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x", "linux-musl-arm64-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model DecisionRecord {
+  id               String   @id @default(uuid())
+  caseId           String   @map("case_id")
+  rulebookId       String   @map("rulebook_id")
+  rulebookVersion  String   @map("rulebook_version")
+  evaluatedAt      String   @map("evaluated_at")
+  decision         String
+  reasonsJson      String   @map("reasons_json")
+  proofRefsJson    String   @map("proof_refs_json")
+  proofChecksJson  String   @map("proof_checks_json")
+  reservationId    String?  @map("reservation_id")
+  decisionHash     String   @map("decision_hash")
+  previousHash     String   @map("previous_hash")
+  recordHash       String   @map("record_hash")
+  createdAt        DateTime @default(now()) @map("created_at")
+  @@index([caseId])
+}
+
+model StatusEvent {
+  id           String   @id @default(uuid())
+  caseId       String   @map("case_id")
+  source       String
+  eventType    String   @map("event_type")
+  eventTime    String   @map("event_time")
+  refsJson     String   @map("refs_json")
+  previousHash String   @map("previous_hash")
+  eventHash    String   @map("event_hash")
+  createdAt    DateTime @default(now()) @map("created_at")
+  @@index([caseId])
+}

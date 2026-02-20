@@ -263,6 +263,45 @@ else
   fail=1
 fi
 
+# Sprint 5: Audit service (port 8087)
+code_dec=$(curl -s -o /tmp/audit-dec.json -w "%{http_code}" -X POST "http://127.0.0.1:8087/v1/audit/decisionRecords" \
+  -H "Content-Type: application/json" \
+  -d '{"caseId":"smoke-a1","rulebookId":"vendor-payment","rulebookVersion":"v0.1","evaluatedAt":"2025-01-15T10:00:00Z","decision":"APPROVE","reasons":[],"proofRefs":[],"proofChecks":[]}' 2>/dev/null || echo "000")
+if [ "$code_dec" = "201" ]; then
+  echo "  OK audit POST decisionRecords -> 201"
+else
+  echo "  FAIL audit decisionRecords (got $code_dec)"
+  fail=1
+fi
+
+code_evt=$(curl -s -o /dev/null -w "%{http_code}" -X POST "http://127.0.0.1:8087/v1/audit/statusEvents" \
+  -H "Content-Type: application/json" \
+  -d '{"caseId":"smoke-a1","source":"smoke-test","eventType":"recorded","eventTime":"2025-01-15T10:01:00Z"}' 2>/dev/null || echo "000")
+if [ "$code_evt" = "201" ]; then
+  echo "  OK audit POST statusEvents -> 201"
+else
+  echo "  FAIL audit statusEvents (got $code_evt)"
+  fail=1
+fi
+
+timeline=$(curl -s "http://127.0.0.1:8087/v1/audit/cases/smoke-a1" 2>/dev/null)
+timeline_len=$(echo "$timeline" | jq '.timeline | length' 2>/dev/null || echo "0")
+if [ "$timeline_len" = "2" ]; then
+  echo "  OK audit GET cases/:caseId timeline (2 entries)"
+else
+  echo "  FAIL audit timeline expected 2 entries (got $timeline_len)"
+  fail=1
+fi
+
+validate=$(curl -s "http://127.0.0.1:8087/v1/audit/cases/smoke-a1/validate" 2>/dev/null)
+integrity=$(echo "$validate" | jq -r .integrity 2>/dev/null)
+if [ "$integrity" = "OK" ]; then
+  echo "  OK audit validate integrity OK"
+else
+  echo "  FAIL audit validate expected OK (got $integrity)"
+  fail=1
+fi
+
 if [ $fail -eq 1 ]; then
   echo "Some smoke tests failed."
   exit 1

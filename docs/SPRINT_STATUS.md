@@ -157,3 +157,26 @@ docker compose up -d   # ensure budget-lock has port 8086
 
 ### Known gaps / tech debt
 - Re-run `docker compose up -d` to expose 8086 if stack was started before Sprint 4
+
+---
+
+## Sprint 5: Audit service (tamper-evident record)
+
+### Goal
+Write decision records and status events with hash chaining per caseId.
+
+### Completed
+- [x] DecisionRecord and StatusEvent (Prisma); POST /v1/audit/decisionRecords, POST /v1/audit/statusEvents
+- [x] Hash chaining: recordHash = SHA256(previousHash + "|" + caseId + "|" + RFC8785_canonical(payload)); shared-crypto canonicalSerialize + sha256Hex
+- [x] GET /v1/audit/cases/:caseId (timeline: decisions + events in chronological order)
+- [x] GET /v1/audit/cases/:caseId/validate (recompute hashes, integrity OK/FAIL)
+- [x] Docker: audit-service port 8087, openssl in Dockerfile
+
+### How to validate
+```bash
+docker compose up -d
+./scripts/smoke-tests.sh
+```
+
+### Known gaps / tech debt
+- None

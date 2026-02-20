@@ -201,6 +201,8 @@ services:
       PORT: 8080
       NODE_ENV: production
       DATABASE_URL: postgresql://pfm:pfm_secret@postgres:5432/pfm
+    ports:
+      - "8087:8080"
     depends_on:
       postgres:
         condition: service_healthy
