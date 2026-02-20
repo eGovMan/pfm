@@ -1,0 +1,43 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Build / dist
+dist/
+build/
+out/
+*.tsbuildinfo
+
+# Environment and secrets
+.env
+.env.local
+.env.*.local
+*.pem
+secrets/
+
+# IDE and OS
+.idea/
+.vscode/
+*.swp
+.DS_Store
+Thumbs.db
+
+# Logs and debug
+logs/
+*.log
+npm-debug.log*
+
+# Test and coverage
+coverage/
+.nyc_output/
+
+# Docker
+.docker/
+
+# Keycloak / runtime data (if exported at runtime)
+# Keep infra/seed/ and realm JSON in repo; ignore runtime DB/volumes as needed
+# (volumes are outside repo; no need to ignore)
+
+# Optional: smoke test report can be regenerated
+# docs/smoke-test-report.md
