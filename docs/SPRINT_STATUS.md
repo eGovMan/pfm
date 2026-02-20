@@ -257,3 +257,29 @@ docker compose up -d
 ### Known gaps / tech debt
 - No router; single-page stepper. Override only sends codes with overrideAllowed true
 - Smoke tests only assert UI health (200); full flow is manual
+
+---
+
+## Sprint 9: Audit viewer UI
+
+### Goal
+Minimal UI that visualizes the case timeline and hash chain.
+
+### Completed
+- [x] Search by caseId; fetch timeline (GET /v1/audit/cases/:caseId) and validate (GET /v1/audit/cases/:caseId/validate)
+- [x] Fetch appeals and overrides (GET /v1/exceptions/cases/:caseId)
+- [x] Integrity indicator (OK/FAIL) from validate response
+- [x] Timeline displayed chronologically (decisions + events); decision shows decision, reasons, rulebook; event shows eventType, source, eventTime, refs
+- [x] Advanced toggle to show raw hashes (previousHash, decisionHash/recordHash or eventHash)
+- [x] Filter by event type (All, Decisions only, or specific eventType)
+- [x] Export timeline JSON (caseId, timeline, exportedAt)
+
+### How to validate
+```bash
+docker compose up -d
+# Open http://localhost:3001 — enter a case ID (e.g. smoke-conn-1, smoke-a1), click Search
+# Check integrity, timeline, appeals/overrides; toggle Advanced; filter; Export JSON
+```
+
+### Known gaps / tech debt
+- No Keycloak auth on audit viewer (view-only; optional for Sprint 10)
