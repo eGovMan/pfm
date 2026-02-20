@@ -66,4 +66,10 @@ curl -s -X POST "$KEYCLOAK_URL/admin/realms/pfm-demo/clients" \
   -H "Content-Type: application/json" \
   -d '{"clientId": "pfm-setup", "enabled": true, "publicClient": true, "directAccessGrantsEnabled": true}' -w "%{http_code}" -o /dev/null | grep -qE '201|409' || true
 
+echo "Creating bill-ui client (SPA, login for Bill Processing UI)..."
+curl -s -X POST "$KEYCLOAK_URL/admin/realms/pfm-demo/clients" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"clientId": "bill-ui", "enabled": true, "publicClient": true, "redirectUris": ["http://localhost:3000/*", "http://127.0.0.1:3000/*", "/"], "webOrigins": ["http://localhost:3000", "http://127.0.0.1:3000", "+"]}' -w "%{http_code}" -o /dev/null | grep -qE '201|409' || true
+
 echo "Keycloak init done."

@@ -228,3 +228,32 @@ docker compose up -d
 
 ### Known gaps / tech debt
 - IFMS dummy/connector smoke tests use 10–15s timeouts for delayed responses
+
+---
+
+## Sprint 8: Bill processing UI
+
+### Goal
+Minimal UI that drives the end-to-end bill flow with Keycloak login.
+
+### Completed
+- [x] Keycloak: bill-ui client (SPA, redirect URIs localhost:3000) in init-keycloak.sh
+- [x] Bill UI: Keycloak login (keycloak-js, login-required); AuthProvider and useAuth
+- [x] Create case form: workId, milestoneId, vendorId, amount, budgetHead, completionDate, bankValidated
+- [x] Issue proofs: work completion and vendor eligibility via works/vendor proof issuers
+- [x] Evaluate via checks-engine; show decision and reason codes
+- [x] If APPROVE: reserve budget, post decision to audit, get decisionHash from timeline, submit payment via connector
+- [x] If HOLD/DENY: show appeal button; show override button only when user has redressal_authority and reason has overrideAllowed
+- [x] API base URLs from config (host + ports 8081–8091); env VITE_KEYCLOAK_URL, VITE_API_HOST for override
+
+### How to validate
+```bash
+./scripts/init-keycloak.sh   # ensure bill-ui client exists
+docker compose up -d
+# Open http://localhost:3000 — redirect to Keycloak login (finance@demo.gov / demo123)
+# Create case, issue proofs, evaluate, reserve & submit (APPROVE) or appeal/override (HOLD/DENY)
+```
+
+### Known gaps / tech debt
+- No router; single-page stepper. Override only sends codes with overrideAllowed true
+- Smoke tests only assert UI health (200); full flow is manual
