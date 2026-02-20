@@ -1,71 +1,52 @@
-# PFM Stack Demo - DPI for Public Finance
+# PFM Stack Demo – DPI for Public Finance
 
-A runnable concept demo for "DPI for Public Finance" (PFM Stack) focused on vendor payments for works, demonstrating trusted proof exchange, consistent rule application, atomic budget commitment control, IFMS interaction, audit trail, and redressal.
+A runnable concept demo for "DPI for Public Finance" (PFM Stack) focused on vendor payments for works: trusted proof exchange, rule evaluation, atomic budget commitment, IFMS interaction, audit trail, and redressal.
 
-## Status
-
-**Planning Phase** - Specifications and sprint plan complete. Ready for implementation after answering open questions.
-
-## Documentation
-
-- **[SUMMARY.md](docs/SUMMARY.md)** - High-level overview and deliverables
-- **[SPRINT_PLAN.md](docs/SPRINT_PLAN.md)** - Detailed 10-sprint breakdown
-- **[SPECIFICATIONS.md](docs/SPECIFICATIONS.md)** - Technical specifications for all services
-- **[PROJECT_STRUCTURE.md](docs/PROJECT_STRUCTURE.md)** - Directory layout and organization
-
-## Quick Start (After Implementation)
+## Quick start
 
 ```bash
-# One-command setup
-make setup
-
-# Or
 ./scripts/setup.sh
 ```
 
-This will:
-1. Start all services (Postgres, Keycloak, 10 microservices, 2 UIs)
-2. Initialize Keycloak with demo users
-3. Generate Ed25519 keypairs
-4. Seed all data (participants, permissions, rulebook, vendors, works, budgets)
-5. Run smoke tests
-6. Print URLs and credentials
+This will build the stack, start Postgres and Keycloak, initialize Keycloak (realm, clients, users), generate Ed25519 keys, seed directory/permissions/rulebook/domain data, run smoke tests, and print URLs and credentials.
+
+**URLs after setup**
+
+- **Bill UI:** http://localhost:3000  
+- **Audit UI:** http://localhost:3001  
+- **Keycloak:** http://localhost:8088  
+
+**Demo users (password: demo123)**  
+finance@demo.gov, treasury@demo.gov, auditor@demo.gov, redressal@demo.gov  
+
+**Keycloak admin:** admin / admin  
+
+## Documentation
+
+- **[SUMMARY.md](docs/SUMMARY.md)** – High-level overview and deliverables  
+- **[SPRINT_PLAN.md](docs/SPRINT_PLAN.md)** – 10-sprint implementation plan  
+- **[SPECIFICATIONS.md](docs/SPECIFICATIONS.md)** – Technical specifications  
+- **[PROJECT_STRUCTURE.md](docs/PROJECT_STRUCTURE.md)** – Directory layout  
+- **[SPRINT_STATUS.md](docs/SPRINT_STATUS.md)** – What’s implemented per sprint  
+- **[docs/api-specs.md](docs/api-specs.md)** – v1 API endpoints  
+- **[docs/demo-script.md](docs/demo-script.md)** – 10–12 min demo walkthrough  
+- **[docs/data-models.md](docs/data-models.md)** – Data models  
+- **[docs/reason-codes.md](docs/reason-codes.md)** – Rulebook reason codes  
 
 ## Architecture
 
-### Services
-- **directory-service** - Participants, keys, permissions
-- **rulebook-service** - Versioned rulebooks
-- **works-proof-issuer** - WorkCompletionProof issuance
-- **vendor-proof-issuer** - VendorEligibilityProof issuance
-- **checks-engine** - Deterministic rule evaluation
-- **budget-lock** - Atomic budget reservations
-- **audit-service** - Tamper-evident audit trail
-- **exceptions-service** - Appeals and overrides
-- **ifms-dummy** - Mock IFMS (voucher + payment)
-- **ifms-connector** - Payment passport submission
+**Services:** directory (8081), rulebook (8084), works-proof (8082), vendor-proof (8083), checks-engine (8085), budget-lock (8086), audit (8087), exceptions (8089), ifms-dummy (8090), ifms-connector (8091).  
 
-### UIs
-- **bill-processing-ui** - Bill creation and processing (port 3000)
-- **audit-viewer-ui** - Audit trail viewing (port 3001)
+**UIs:** bill-processing-ui (3000), audit-viewer-ui (3001).  
 
-### Infrastructure
-- **Postgres** - Single instance
-- **Keycloak** - Authentication (port 8080)
+**Infra:** Postgres, Keycloak (8088).  
 
-## Core Concepts
+## Troubleshooting
 
-- **Trust Bootstrapping** - Participants with Ed25519 keys, permissions
-- **Proof Exchange** - Signed WorkCompletionProof and VendorEligibilityProof
-- **Rule Application** - Deterministic evaluation with reason codes
-- **Budget Control** - Atomic reservation with concurrency safety
-- **IFMS Integration** - Payment passport submission
-- **Audit Trail** - Hash-chained tamper-evident records
-- **Redressal** - Appeals and authorized overrides
-
-## Next Steps
-
-1. Begin Sprint 0: Infrastructure & Bootstrap (all defaults in `docs/SPECIFICATIONS.md`)
+- **Smoke tests fail (directory 500, budget 000, etc.):** Run full setup so seeds and keys are applied: `./scripts/init-keycloak.sh`, `./scripts/generate-keys.sh`, `./scripts/seed-directory.sh`, `./scripts/seed-permissions.sh`, `./scripts/seed-rulebook.sh`, then `./scripts/smoke-tests.sh`.
+- **Bill UI redirects to login forever:** Ensure Keycloak is ready and bill-ui client exists: `./scripts/init-keycloak.sh`. Use http://localhost:3000 (not 127.0.0.1) if that’s what’s configured in Keycloak redirect URIs.
+- **Evaluate returns DENY with valid proofs:** Re-seed directory after generating keys so public keys are in directory; re-seed rulebook if needed.
+- **Skip smoke tests on setup:** `SKIP_SMOKE_TESTS=1 ./scripts/setup.sh`
 
 ## License
 

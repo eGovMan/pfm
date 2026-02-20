@@ -283,3 +283,28 @@ docker compose up -d
 
 ### Known gaps / tech debt
 - No Keycloak auth on audit viewer (view-only; optional for Sprint 10)
+
+---
+
+## Sprint 10: Integration, smoke tests, docs, demo script
+
+### Goal
+Make the demo reliable, repeatable, and presentable in 10–12 minutes.
+
+### Completed
+- [x] Smoke test suite (scripts/smoke-tests.sh): directory keys/endpoints, permission deny unauthorized, both issuers issue+verify, checks-engine DENY/APPROVE, rulebook overrideAllowed, budget reserve/confirm/release/idempotency/over-allocate, audit decisionRecords/statusEvents/timeline/validate, exceptions appeal/override 401/403/GET cases, IFMS dummy voucher/pay/status, connector invalid 400 + happy path (reserve, decision, submitPayment, audit events)
+- [x] docs/api-specs.md – v1 endpoints with method, path, and brief description
+- [x] docs/demo-script.md – timed walkthrough (happy path, audit viewer, HOLD appeal, redressal override, optional concurrency)
+- [x] docs/data-models.md – proof, passport, budget, audit, exceptions
+- [x] docs/reason-codes.md – vendor-payment v0.1 reason codes table
+- [x] README.md – one-command setup, URLs, credentials, troubleshooting, links to all docs
+
+### How to validate
+```bash
+./scripts/setup.sh
+# All smoke tests pass; follow docs/demo-script.md in 10–12 min
+```
+
+### Known gaps / tech debt
+- Connector failure path (IFMS forceFail) not in smoke; manual via demo
+- Smoke-test report written to docs/smoke-test-report.md when run from setup.sh
