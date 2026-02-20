@@ -1,0 +1,24 @@
+generator client {
+  provider      = "prisma-client-js"
+  output        = "../src/generated/prisma"
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x", "linux-musl-arm64-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Voucher {
+  id          String    @id @default(uuid())
+  voucherNo   String    @unique @map("voucher_no")
+  caseId      String    @map("case_id")
+  amount      BigInt
+  budgetHead  String    @map("budget_head")
+  vendorId    String    @map("vendor_id")
+  description String?   @db.Text
+  status      String    // created | paid
+  createdAt   DateTime  @default(now()) @map("created_at")
+  paidAt      DateTime? @map("paid_at")
+  @@index([caseId])
+}

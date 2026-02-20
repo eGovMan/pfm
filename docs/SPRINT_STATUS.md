@@ -205,3 +205,26 @@ docker compose up -d
 
 ### Known gaps / tech debt
 - Smoke 403 test skipped if Keycloak token for redressal not available
+
+---
+
+## Sprint 7: IFMS dummy and connector
+
+### Goal
+Simulate IFMS voucher and payment; connector submits payment passports and manages budget confirm/release and audit events.
+
+### Completed
+- [x] IFMS dummy: Voucher model (Prisma); POST /v1/ifms/voucher (delay 2s), POST /v1/ifms/pay (delay 3s), GET /v1/ifms/status/:caseId; FAIL_RATE and forceFail for demo failures
+- [x] IFMS connector: POST /v1/connector/submitPayment; validates passport (structure, reservation RESERVED, decision APPROVE, decisionHash matches audit); calls ifms-dummy voucher then pay; on success confirm reservation and POST voucher_created + payment_completed to audit; on failure release reservation and POST payment_failed
+- [x] Budget-lock: GET /v1/budget/reservations/:reservationId for connector validation
+- [x] Docker: ifms-dummy port 8090, ifms-connector port 8091; connector env IFMS_BASE_URL, BUDGET_BASE_URL, AUDIT_BASE_URL; depends_on ifms-dummy, budget-lock, audit-service
+- [x] Smoke tests: IFMS dummy voucher/pay/status; connector invalid 400; connector happy path (reserve, decision, submitPayment, audit timeline)
+
+### How to validate
+```bash
+docker compose up -d
+./scripts/smoke-tests.sh
+```
+
+### Known gaps / tech debt
+- IFMS dummy/connector smoke tests use 10–15s timeouts for delayed responses

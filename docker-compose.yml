@@ -249,6 +249,9 @@ services:
       PORT: 8080
       NODE_ENV: production
       DATABASE_URL: postgresql://pfm:pfm_secret@postgres:5432/pfm
+      FAIL_RATE: ${FAIL_RATE:-0}
+    ports:
+      - "8090:8080"
     depends_on:
       postgres:
         condition: service_healthy
@@ -267,9 +270,17 @@ services:
     environment:
       PORT: 8080
       NODE_ENV: production
-      DATABASE_URL: postgresql://pfm:pfm_secret@postgres:5432/pfm
+      IFMS_BASE_URL: http://ifms-dummy:8080
+      BUDGET_BASE_URL: http://budget-lock:8080
+      AUDIT_BASE_URL: http://audit-service:8080
+    ports:
+      - "8091:8080"
     depends_on:
-      postgres:
+      ifms-dummy:
+        condition: service_healthy
+      budget-lock:
+        condition: service_healthy
+      audit-service:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "node", "-e", "require('http').get('http://127.0.0.1:8080/health', (r)=>{ let b=''; r.on('data',c=>b+=c); r.on('end',()=>process.exit(r.statusCode===200?0:1)); }).on('error',()=>process.exit(1));"]

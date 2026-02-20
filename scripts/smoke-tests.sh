@@ -349,6 +349,82 @@ else
   fail=1
 fi
 
+# Sprint 7: IFMS dummy (port 8090; voucher 2s + pay 3s delay)
+code_voucher=$(curl -s --max-time 10 -o /tmp/ifms-voucher.json -w "%{http_code}" -X POST "http://127.0.0.1:8090/v1/ifms/voucher" \
+  -H "Content-Type: application/json" \
+  -d '{"caseId":"smoke-ifms-2","amount":10000,"budgetHead":"head-001","vendorId":"v1"}' 2>/dev/null || echo "000")
+if [ "$code_voucher" = "201" ]; then
+  echo "  OK IFMS dummy POST /v1/ifms/voucher -> 201"
+  voucher_no=$(jq -r .voucherNo /tmp/ifms-voucher.json 2>/dev/null)
+  code_pay=$(curl -s --max-time 10 -o /tmp/ifms-pay.json -w "%{http_code}" -X POST "http://127.0.0.1:8090/v1/ifms/pay" \
+    -H "Content-Type: application/json" -d "{\"voucherNo\":\"$voucher_no\"}" 2>/dev/null || echo "000")
+  if [ "$code_pay" = "200" ]; then
+    echo "  OK IFMS dummy POST /v1/ifms/pay -> 200"
+  else
+    echo "  FAIL IFMS dummy pay (got $code_pay)"
+    fail=1
+  fi
+  status_val=$(curl -s "http://127.0.0.1:8090/v1/ifms/status/smoke-ifms-2" 2>/dev/null | jq -r .status 2>/dev/null)
+  if [ "$status_val" = "paid" ]; then
+    echo "  OK IFMS dummy GET status -> paid"
+  else
+    echo "  FAIL IFMS dummy status expected paid (got $status_val)"
+    fail=1
+  fi
+else
+  echo "  FAIL IFMS dummy voucher (got $code_voucher)"
+  fail=1
+fi
+
+# Sprint 7: IFMS connector (port 8091) – invalid payload and happy path
+code_bad=$(curl -s -o /dev/null -w "%{http_code}" -X POST "http://127.0.0.1:8091/v1/connector/submitPayment" \
+  -H "Content-Type: application/json" -d '{"caseId":"x","decision":"DENY"}' 2>/dev/null || echo "000")
+if [ "$code_bad" = "400" ]; then
+  echo "  OK connector submitPayment invalid -> 400"
+else
+  echo "  FAIL connector invalid expected 400 (got $code_bad)"
+  fail=1
+fi
+
+# Connector happy path: reserve, post decision to audit, submit payment
+res_conn=$(curl -s -X POST "http://127.0.0.1:8086/v1/budget/reserve" \
+  -H "Content-Type: application/json" \
+  -d '{"caseId":"smoke-conn-1","budgetHead":"head-001","amount":25000}' 2>/dev/null)
+rid_conn=$(echo "$res_conn" | jq -r .reservationId 2>/dev/null)
+if [ -z "$rid_conn" ] || [ "$rid_conn" = "null" ]; then
+  echo "  SKIP connector happy path (reserve failed)"
+else
+  curl -s -X POST "http://127.0.0.1:8087/v1/audit/decisionRecords" \
+    -H "Content-Type: application/json" \
+    -d "{\"caseId\":\"smoke-conn-1\",\"rulebookId\":\"vendor-payment\",\"rulebookVersion\":\"v0.1\",\"evaluatedAt\":\"2025-01-15T10:05:00Z\",\"decision\":\"APPROVE\",\"reasons\":[],\"proofRefs\":[],\"proofChecks\":[],\"reservationId\":\"$rid_conn\"}" >/dev/null 2>&1
+  timeline_conn=$(curl -s "http://127.0.0.1:8087/v1/audit/cases/smoke-conn-1" 2>/dev/null)
+  decision_hash=$(echo "$timeline_conn" | jq -r '[.timeline[] | select(.type=="decision")] | last | .data.decisionHash' 2>/dev/null)
+  if [ -z "$decision_hash" ] || [ "$decision_hash" = "null" ]; then
+    echo "  SKIP connector happy path (no decisionHash)"
+  else
+    # IFMS has 2s+3s delay; wait for submitPayment
+    code_submit=$(curl -s --max-time 15 -o /tmp/conn-submit.json -w "%{http_code}" -X POST "http://127.0.0.1:8091/v1/connector/submitPayment" \
+      -H "Content-Type: application/json" \
+      -d "{\"caseId\":\"smoke-conn-1\",\"amount\":25000,\"budgetHead\":\"head-001\",\"vendorId\":\"v1\",\"workId\":\"w1\",\"milestoneId\":\"m1\",\"rulebookId\":\"vendor-payment\",\"rulebookVersion\":\"v0.1\",\"proofRefs\":[],\"reservationId\":\"$rid_conn\",\"decision\":\"APPROVE\",\"decisionHash\":\"$decision_hash\",\"issuedAt\":\"2025-01-15T10:05:00Z\"}" 2>/dev/null || echo "000")
+    if [ "$code_submit" = "200" ]; then
+      echo "  OK connector submitPayment happy path -> 200"
+      timeline_after=$(curl -s "http://127.0.0.1:8087/v1/audit/cases/smoke-conn-1" 2>/dev/null)
+      has_voucher=$(echo "$timeline_after" | jq '[.timeline[] | select(.type=="event" and .data.eventType=="voucher_created")] | length' 2>/dev/null || echo "0")
+      has_paid=$(echo "$timeline_after" | jq '[.timeline[] | select(.type=="event" and .data.eventType=="payment_completed")] | length' 2>/dev/null || echo "0")
+      if [ "$has_voucher" -ge "1" ] && [ "$has_paid" -ge "1" ]; then
+        echo "  OK connector audit timeline has voucher_created and payment_completed"
+      else
+        echo "  FAIL connector audit events (voucher=$has_voucher paid=$has_paid)"
+        fail=1
+      fi
+    else
+      err_code=$(jq -r .error.code /tmp/conn-submit.json 2>/dev/null)
+      echo "  FAIL connector submitPayment (got $code_submit, $err_code)"
+      fail=1
+    fi
+  fi
+fi
+
 if [ $fail -eq 1 ]; then
   echo "Some smoke tests failed."
   exit 1

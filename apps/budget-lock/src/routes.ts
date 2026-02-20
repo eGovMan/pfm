@@ -182,6 +182,26 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
     }
   });
 
+  // GET /v1/budget/reservations/:reservationId - for connector to verify RESERVED before submit
+  app.get<{ Params: { reservationId: string } }>('/v1/budget/reservations/:reservationId', async (request, reply) => {
+    const { reservationId } = request.params;
+    const r = await prisma.reservation.findUnique({
+      where: { id: reservationId },
+      include: { budgetHead: true },
+    });
+    if (!r) {
+      return reply.status(404).send(createErrorEnvelope('NOT_FOUND', 'Reservation not found'));
+    }
+    return reply.status(200).send({
+      reservationId: r.id,
+      caseId: r.caseId,
+      budgetHead: r.budgetHeadId,
+      amount: toNum(r.amount),
+      status: r.status,
+      expiresAt: r.expiresAt.toISOString(),
+    });
+  });
+
   // GET /v1/budget/:budgetHead (debug)
   app.get<{ Params: { budgetHead: string } }>('/v1/budget/:budgetHead', async (request, reply) => {
     const { budgetHead } = request.params;
