@@ -6,7 +6,7 @@
     "build": "prisma generate && tsc && cp -r src/generated dist/",
     "start": "node dist/index.js",
     "dev": "tsc --watch",
-    "lint": "eslint src --ext .ts",
+    "lint": "eslint src --ext .ts --ignore-pattern 'src/generated/**'",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

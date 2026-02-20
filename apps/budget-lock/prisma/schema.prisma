@@ -1,0 +1,32 @@
+generator client {
+  provider      = "prisma-client-js"
+  output        = "../src/generated/prisma"
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x", "linux-musl-arm64-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model BudgetHead {
+  budgetHead String   @id
+  total     BigInt   @default(0)
+  committed BigInt   @default(0)
+  reserved  BigInt   @default(0)
+  reservations Reservation[]
+}
+
+model Reservation {
+  id             String   @id @default(uuid())
+  caseId         String
+  budgetHeadId   String   @map("budget_head_id")
+  amount         BigInt
+  status         String   // RESERVED | CONFIRMED | RELEASED | EXPIRED
+  createdAt      DateTime @default(now())
+  expiresAt      DateTime @map("expires_at")
+  budgetHead     BudgetHead @relation(fields: [budgetHeadId], references: [budgetHead], onDelete: Cascade)
+  @@index([caseId, status])
+  @@index([budgetHeadId])
+  @@index([status, expiresAt])
+}

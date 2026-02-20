@@ -133,3 +133,27 @@ docker compose up -d
 
 ### Known gaps / tech debt
 - If Postgres is recreated, re-run seed-directory and seed-rulebook
+
+---
+
+## Sprint 4: Budget lock (atomic reservation)
+
+### Goal
+Atomic budget reservation and commit with concurrency safety and idempotency.
+
+### Completed
+- [x] BudgetHead and Reservation models (Prisma); reserve/confirm/release with SELECT FOR UPDATE
+- [x] POST /v1/budget/reserve (caseId, budgetHead, amount, ttlSeconds); idempotent by caseId
+- [x] POST /v1/budget/confirm, POST /v1/budget/release; GET /v1/budget/:budgetHead (debug)
+- [x] POST /v1/admin/budget/heads (budgetHead, total) for seeding
+- [x] Expiry job every 60s to release expired RESERVED
+- [x] Smoke tests: admin head, reserve, idempotent reserve, confirm, GET committed, release, over-allocate rejected
+
+### How to validate
+```bash
+docker compose up -d   # ensure budget-lock has port 8086
+./scripts/smoke-tests.sh
+```
+
+### Known gaps / tech debt
+- Re-run `docker compose up -d` to expose 8086 if stack was started before Sprint 4

@@ -187,6 +187,82 @@ else
   fail=1
 fi
 
+# Sprint 4: Budget lock (exposed 8086)
+code_head=$(curl -s -o /dev/null -w "%{http_code}" -X POST "http://127.0.0.1:8086/v1/admin/budget/heads" \
+  -H "Content-Type: application/json" -d '{"budgetHead":"head-001","total":1000000}' 2>/dev/null || echo "000")
+if [ "$code_head" = "201" ]; then
+  echo "  OK budget-lock POST admin budget head -> 201"
+else
+  echo "  FAIL budget-lock admin head (got $code_head)"
+  fail=1
+fi
+
+res1=$(curl -s -X POST "http://127.0.0.1:8086/v1/budget/reserve" \
+  -H "Content-Type: application/json" \
+  -d '{"caseId":"smoke-c1","budgetHead":"head-001","amount":50000}' 2>/dev/null)
+rid1=$(echo "$res1" | jq -r .reservationId 2>/dev/null)
+if [ -n "$rid1" ] && [ "$rid1" != "null" ]; then
+  echo "  OK budget-lock POST reserve -> reservationId"
+else
+  echo "  FAIL budget-lock reserve (got $res1)"
+  fail=1
+fi
+
+res1b=$(curl -s -X POST "http://127.0.0.1:8086/v1/budget/reserve" \
+  -H "Content-Type: application/json" \
+  -d '{"caseId":"smoke-c1","budgetHead":"head-001","amount":50000}' 2>/dev/null)
+rid1b=$(echo "$res1b" | jq -r .reservationId 2>/dev/null)
+if [ "$rid1b" = "$rid1" ]; then
+  echo "  OK budget-lock idempotent reserve (same caseId -> same reservationId)"
+else
+  echo "  FAIL budget-lock idempotency (got $rid1b expected $rid1)"
+  fail=1
+fi
+
+code_confirm=$(curl -s -o /dev/null -w "%{http_code}" -X POST "http://127.0.0.1:8086/v1/budget/confirm" \
+  -H "Content-Type: application/json" -d "{\"reservationId\":\"$rid1\"}" 2>/dev/null || echo "000")
+if [ "$code_confirm" = "200" ]; then
+  echo "  OK budget-lock POST confirm -> 200"
+else
+  echo "  FAIL budget-lock confirm (got $code_confirm)"
+  fail=1
+fi
+
+head_after=$(curl -s "http://127.0.0.1:8086/v1/budget/head-001" 2>/dev/null)
+committed=$(echo "$head_after" | jq -r .committed 2>/dev/null)
+if [ "$committed" = "50000" ]; then
+  echo "  OK budget-lock GET head committed 50000"
+else
+  echo "  FAIL budget-lock committed expected 50000 (got $committed)"
+  fail=1
+fi
+
+res2=$(curl -s -X POST "http://127.0.0.1:8086/v1/budget/reserve" \
+  -H "Content-Type: application/json" \
+  -d '{"caseId":"smoke-c2","budgetHead":"head-001","amount":30000}' 2>/dev/null)
+rid2=$(echo "$res2" | jq -r .reservationId 2>/dev/null)
+code_release=$(curl -s -o /dev/null -w "%{http_code}" -X POST "http://127.0.0.1:8086/v1/budget/release" \
+  -H "Content-Type: application/json" -d "{\"reservationId\":\"$rid2\"}" 2>/dev/null || echo "000")
+if [ "$code_release" = "200" ]; then
+  echo "  OK budget-lock POST release -> 200"
+else
+  echo "  FAIL budget-lock release (got $code_release)"
+  fail=1
+fi
+
+# Over-allocate: head has 1000000 - 50000 committed - 0 reserved = 950000. Reserve 600000 twice; second should fail
+curl -s -X POST "http://127.0.0.1:8086/v1/budget/reserve" -H "Content-Type: application/json" \
+  -d '{"caseId":"smoke-c3","budgetHead":"head-001","amount":600000}' >/dev/null 2>&1
+over=$(curl -s -X POST "http://127.0.0.1:8086/v1/budget/reserve" -H "Content-Type: application/json" \
+  -d '{"caseId":"smoke-c4","budgetHead":"head-001","amount":600000}' 2>/dev/null)
+over_err=$(echo "$over" | jq -r .error.code 2>/dev/null)
+if [ "$over_err" = "INSUFFICIENT_HEADROOM" ]; then
+  echo "  OK budget-lock over-allocate rejected INSUFFICIENT_HEADROOM"
+else
+  echo "  FAIL budget-lock expected INSUFFICIENT_HEADROOM (got $over_err)"
+  fail=1
+fi
+
 if [ $fail -eq 1 ]; then
   echo "Some smoke tests failed."
   exit 1
