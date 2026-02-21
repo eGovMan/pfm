@@ -24,7 +24,7 @@ docker compose ps
 3. Create case: keep defaults (workId work-1, milestoneId m1, vendorId v1, amount 50000, budgetHead head-001) or change; click **Next: Fetch proofs**.
 4. Click **Issue proofs** (wait ~1s).
 5. Click **Evaluate** → decision should be **APPROVE**.
-6. Click **Reserve budget & submit payment** (wait ~5–6s for IFMS delay) → “Payment submitted successfully.”
+6. Click **Reserve budget & submit payment** once (wait ~5–6s for IFMS delay) → “Payment submitted successfully.” The button disables after success to avoid duplicate timeline entries.
 7. Note the **Case ID** at the top (e.g. `case-xyz`).
 
 ---

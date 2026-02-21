@@ -237,10 +237,20 @@ export default function App() {
   return (
     <div style={{ padding: '2rem', fontFamily: 'system-ui', maxWidth: 720 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-        <h1 style={{ margin: 0 }}>Bill Processing</h1>
+        <h1 style={{ margin: 0 }}>
+          Bill Processing
+          {canOverride && (
+            <span style={{ fontSize: '0.6em', fontWeight: 'normal', color: '#666', marginLeft: '0.5rem' }}>
+              · Redressal
+            </span>
+          )}
+        </h1>
         <div>
           <span style={{ marginRight: '1rem' }}>
             {(keycloak.tokenParsed as { preferred_username?: string })?.preferred_username ?? 'User'}
+            {canOverride && (
+              <span style={{ fontSize: '0.85em', color: '#666', marginLeft: '0.35rem' }}>(redressal)</span>
+            )}
           </span>
           <button type="button" onClick={handleLogout}>
             Logout
@@ -307,8 +317,12 @@ export default function App() {
           )}
           {evalResult.decision === 'APPROVE' && (
             <div>
-              <button type="button" onClick={handleReserveAndSubmit} disabled={loading}>
-                {loading ? 'Submitting…' : 'Reserve budget & submit payment'}
+              <button
+                type="button"
+                onClick={handleReserveAndSubmit}
+                disabled={loading || !!submitStatus}
+              >
+                {loading ? 'Submitting…' : submitStatus ? 'Submitted' : 'Reserve budget & submit payment'}
               </button>
               {submitStatus && <p style={{ color: 'green' }}>{submitStatus}</p>}
             </div>

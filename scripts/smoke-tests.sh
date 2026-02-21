@@ -427,6 +427,14 @@ fi
 
 if [ $fail -eq 1 ]; then
   echo "Some smoke tests failed."
+  echo ""
+  echo "Hint: Run the full setup so directory, rulebook, and budget are seeded:"
+  echo "  ./scripts/init-keycloak.sh"
+  echo "  ./scripts/generate-keys.sh"
+  echo "  ./scripts/seed-directory.sh"
+  echo "  ./scripts/seed-permissions.sh"
+  echo "  ./scripts/seed-rulebook.sh"
+  echo "Or run: ./scripts/setup.sh"
   exit 1
 fi
 echo "All smoke tests passed."

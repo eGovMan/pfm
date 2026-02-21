@@ -9,9 +9,10 @@ export async function migrate(): Promise<void> {
   try {
     execSync('npx prisma db push --accept-data-loss', {
       env: { ...process.env, DATABASE_URL: databaseUrl },
-      stdio: 'ignore',
+      stdio: 'inherit',
     });
-  } catch {
-    // ignore
+  } catch (e) {
+    console.error('Rulebook DB migrate failed:', e instanceof Error ? e.message : e);
+    throw e;
   }
 }

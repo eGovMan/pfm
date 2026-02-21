@@ -27,26 +27,39 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
     Params: { rulebookId: string };
     Querystring: { version?: string };
   }>('/v1/rulebooks/:rulebookId', async (request, reply) => {
-    const { rulebookId } = request.params;
-    const version = request.query.version;
-    const where: { rulebookId: string; version?: string } = { rulebookId };
-    if (version) where.version = version;
-    const row = version
-      ? await prisma.rulebook.findUnique({ where: { rulebookId_version: { rulebookId, version } } })
-      : await prisma.rulebook.findFirst({ where: { rulebookId }, orderBy: { createdAt: 'desc' } });
-    if (!row) {
-      return reply.status(404).send(createErrorEnvelope('NOT_FOUND', 'Rulebook version not found'));
+    try {
+      const { rulebookId } = request.params;
+      const version = request.query.version;
+      const row = version
+        ? await prisma.rulebook.findUnique({ where: { rulebookId_version: { rulebookId, version } } })
+        : await prisma.rulebook.findFirst({ where: { rulebookId }, orderBy: { createdAt: 'desc' } });
+      if (!row) {
+        return reply.status(404).send(createErrorEnvelope('NOT_FOUND', 'Rulebook version not found'));
+      }
+      let rules: unknown = [];
+      let reasonCodes: unknown = {};
+      try {
+        rules = row.rulesJson != null && row.rulesJson !== '' ? JSON.parse(row.rulesJson) : [];
+      } catch {
+        rules = [];
+      }
+      try {
+        reasonCodes = row.reasonCodesJson != null && row.reasonCodesJson !== '' ? JSON.parse(row.reasonCodesJson) : {};
+      } catch {
+        reasonCodes = {};
+      }
+      return reply.status(200).send({
+        rulebookId: row.rulebookId,
+        version: row.version,
+        rulesJson: rules,
+        reasonCodesJson: reasonCodes,
+        createdAt: row.createdAt.toISOString(),
+        createdBy: row.createdBy ?? undefined,
+      });
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : 'Failed to get rulebook';
+      return reply.status(500).send(createErrorEnvelope('RULEBOOK_ERROR', msg));
     }
-    const rules = JSON.parse(row.rulesJson) as unknown;
-    const reasonCodes = JSON.parse(row.reasonCodesJson) as unknown;
-    return reply.status(200).send({
-      rulebookId: row.rulebookId,
-      version: row.version,
-      rulesJson: rules,
-      reasonCodesJson: reasonCodes,
-      createdAt: row.createdAt.toISOString(),
-      createdBy: row.createdBy ?? undefined,
-    });
   });
 
   // GET /v1/rulebooks/:rulebookId/reasonCodes?version=

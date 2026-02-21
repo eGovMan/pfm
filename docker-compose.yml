@@ -32,6 +32,8 @@ services:
       KC_DB_PASSWORD: pfm_secret
       KC_HEALTH_ENABLED: "true"
       KC_HTTP_PORT: 8080
+      # Avoid UI freeze in dev (give JVM more headroom)
+      JAVA_OPTS_APPEND: "-Xmx512m -Djava.awt.headless=true"
     ports:
       - "8088:8080"
     depends_on:

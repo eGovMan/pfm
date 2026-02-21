@@ -29,15 +29,17 @@ if command -v node >/dev/null 2>&1; then
       const priv = privateKey.export({ type: 'pkcs8', format: 'pem' });
       fs.writeFileSync(keysDir + '/' + p.id + '.pub', pub);
       fs.writeFileSync(keysDir + '/' + p.id + '.key', priv);
-      out[p.name] = { publicKey: pub.replace(/-----BEGIN PUBLIC KEY-----|-----END PUBLIC KEY-----|\\n/g, '') };
+      const base64 = pub.replace(/-----BEGIN PUBLIC KEY-----|-----END PUBLIC KEY-----/g, '').replace(/\s/g, '');
+      out[p.name] = { publicKey: base64 };
     });
     fs.writeFileSync(seedDir + '/public-keys.json', JSON.stringify(out, null, 2));
     console.log('Keys generated.');
-  " 2>/dev/null || true
+  " || true
 fi
 
-if [ ! -f "$SEED_DIR/public-keys.json" ]; then
+if [ ! -f "$SEED_DIR/public-keys.json" ] || ! grep -qE '"publicKey"\s*:\s*"[A-Za-z0-9+/=]{20}' "$SEED_DIR/public-keys.json" 2>/dev/null; then
   echo '{"did:web:works.demo.gov":{"publicKey":""},"did:web:vendor.demo.gov":{"publicKey":""}}' > "$SEED_DIR/public-keys.json"
-  echo "Placeholder public-keys.json created. Run with Node to generate real keys."
+  echo "Placeholder public-keys.json present. Install Node and re-run to generate real keys."
+  exit 1
 fi
 echo "Key generation step done."

@@ -50,9 +50,9 @@ for user in "finance@demo.gov:finance_admin,dept_operator" "treasury@demo.gov:tr
     -d "{\"username\": \"$UNAME\", \"email\": \"$UNAME\", \"enabled\": true, \"credentials\": [{\"type\": \"password\", \"value\": \"demo123\", \"temporary\": false}]}" -w "%{http_code}" -o /dev/null | grep -qE '201|409' || true
   for role in $(echo "$ROLES" | tr ',' ' '); do
     RID=$(curl -s -X GET "$KEYCLOAK_URL/admin/realms/pfm-demo/roles?search=$role" -H "Authorization: Bearer $TOKEN" | node -e "let d=''; process.stdin.on('data',c=>d+=c); process.stdin.on('end',()=>{ try { const a=JSON.parse(d); process.stdout.write(a[0]&&a[0].id?a[0].id:''); } catch(e){} });" 2>/dev/null)
-    UID=$(curl -s -X GET "$KEYCLOAK_URL/admin/realms/pfm-demo/users?username=$UNAME" -H "Authorization: Bearer $TOKEN" | node -e "let d=''; process.stdin.on('data',c=>d+=c); process.stdin.on('end',()=>{ try { const a=JSON.parse(d); process.stdout.write(a[0]&&a[0].id?a[0].id:''); } catch(e){} });" 2>/dev/null)
-    if [ -n "$RID" ] && [ -n "$UID" ]; then
-      curl -s -X POST "$KEYCLOAK_URL/admin/realms/pfm-demo/users/$UID/role-mappings/realm" \
+    KC_UID=$(curl -s -X GET "$KEYCLOAK_URL/admin/realms/pfm-demo/users?username=$UNAME" -H "Authorization: Bearer $TOKEN" | node -e "let d=''; process.stdin.on('data',c=>d+=c); process.stdin.on('end',()=>{ try { const a=JSON.parse(d); process.stdout.write(a[0]&&a[0].id?a[0].id:''); } catch(e){} });" 2>/dev/null)
+    if [ -n "$RID" ] && [ -n "$KC_UID" ]; then
+      curl -s -X POST "$KEYCLOAK_URL/admin/realms/pfm-demo/users/$KC_UID/role-mappings/realm" \
         -H "Authorization: Bearer $TOKEN" \
         -H "Content-Type: application/json" \
         -d "[{\"id\": \"$RID\", \"name\": \"$role\"}]" -o /dev/null || true
@@ -66,10 +66,31 @@ curl -s -X POST "$KEYCLOAK_URL/admin/realms/pfm-demo/clients" \
   -H "Content-Type: application/json" \
   -d '{"clientId": "pfm-setup", "enabled": true, "publicClient": true, "directAccessGrantsEnabled": true}' -w "%{http_code}" -o /dev/null | grep -qE '201|409' || true
 
-echo "Creating bill-ui client (SPA, login for Bill Processing UI)..."
-curl -s -X POST "$KEYCLOAK_URL/admin/realms/pfm-demo/clients" \
+echo "Creating or updating bill-ui client (SPA, login for Bill Processing UI)..."
+# redirectUris: exact root and wildcard so redirect_uri=http://localhost:3000/ is accepted
+BILL_UI_REDIRECTS='["http://localhost:3000", "http://localhost:3000/", "http://localhost:3000/*", "http://127.0.0.1:3000", "http://127.0.0.1:3000/", "http://127.0.0.1:3000/*"]'
+HTTP=$(curl -s -w "%{http_code}" -o /tmp/bill-ui-create.out -X POST "$KEYCLOAK_URL/admin/realms/pfm-demo/clients" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
-  -d '{"clientId": "bill-ui", "enabled": true, "publicClient": true, "redirectUris": ["http://localhost:3000/*", "http://127.0.0.1:3000/*", "/"], "webOrigins": ["http://localhost:3000", "http://127.0.0.1:3000", "+"]}' -w "%{http_code}" -o /dev/null | grep -qE '201|409' || true
+  -d "{\"clientId\": \"bill-ui\", \"enabled\": true, \"publicClient\": true, \"standardFlowEnabled\": true, \"redirectUris\": $BILL_UI_REDIRECTS, \"webOrigins\": [\"http://localhost:3000\", \"http://127.0.0.1:3000\", \"+\"]}")
+if [ "$HTTP" = "409" ]; then
+  # Client exists: get id and update redirect URIs
+  BILL_UI_ID=$(curl -s -X GET "$KEYCLOAK_URL/admin/realms/pfm-demo/clients?clientId=bill-ui" -H "Authorization: Bearer $TOKEN" | node -e "let d=''; process.stdin.on('data',c=>d+=c); process.stdin.on('end',()=>{ try { const a=JSON.parse(d); process.stdout.write(a[0]&&a[0].id?a[0].id:''); } catch(e){} });" 2>/dev/null)
+  if [ -n "$BILL_UI_ID" ]; then
+    curl -s -X GET "$KEYCLOAK_URL/admin/realms/pfm-demo/clients/$BILL_UI_ID" -H "Authorization: Bearer $TOKEN" -o /tmp/bill-ui-get.json 2>/dev/null
+    node -e "
+      const fs = require('fs');
+      const c = JSON.parse(fs.readFileSync('/tmp/bill-ui-get.json', 'utf8'));
+      c.redirectUris = $BILL_UI_REDIRECTS;
+      c.webOrigins = ['http://localhost:3000', 'http://127.0.0.1:3000', '+'];
+      c.standardFlowEnabled = true;
+      console.log(JSON.stringify(c));
+    " 2>/dev/null > /tmp/bill-ui-update.json
+    curl -s -X PUT "$KEYCLOAK_URL/admin/realms/pfm-demo/clients/$BILL_UI_ID" \
+      -H "Authorization: Bearer $TOKEN" \
+      -H "Content-Type: application/json" \
+      -d @/tmp/bill-ui-update.json -w "%{http_code}" -o /dev/null | grep -q 200 && echo "  bill-ui client redirect URIs updated." || true
+  fi
+fi
 
 echo "Keycloak init done."
